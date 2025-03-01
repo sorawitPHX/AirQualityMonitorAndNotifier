@@ -28,9 +28,11 @@ mqttClient.on('connect', () => {
 
 mqttClient.on('message', (topic, message) => {
     try {
+        const header = topic.split('/').slice(-1)[0]
         const data = {
-            topic,
-            value: JSON.parse(message.toString())
+            header: header,
+            value: JSON.parse(message.toString()),
+            timestamp: new Date()
         }
         console.log(new Date().toISOString(), data)
         wss.clients.forEach(client => {

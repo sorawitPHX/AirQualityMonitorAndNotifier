@@ -1,0 +1,2 @@
+cd webserver
+npx @tailwindcss/cli -i ./src/tailwind.css -o ./public/css/tailwind.css
