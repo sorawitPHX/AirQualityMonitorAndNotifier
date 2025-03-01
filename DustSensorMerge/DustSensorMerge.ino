@@ -18,11 +18,7 @@
 #define MQTT_MAX_PACKET_SIZE 512
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire,OLED_RESET);
 
-const int ANALOG_INPUT_PIN = A0;
-const int MIN_ANALOG_INPUT = 0;
-const int MAX_ANALOG_INPUT = 1023;
 const int DELAY_LOOP_MS = 5; // change to slow down how often to read
-int analogVal = 0;
 
 using namespace std;
 
@@ -317,10 +313,22 @@ void setup() {
   display.clearDisplay();
 }
 
-void printOLED(float pm25Value, String pm25Quality, float coValue, String coQuality, float co2Value, String co2Quality, float humidity, float temp) {
+void printOLED(
+    float pm25Value, 
+    String pm25Quality, 
+    float coValue, 
+    String coQuality, 
+    float co2Value, 
+    String co2Quality, 
+    float humidity, 
+    float temp
+  ) {
+  display.setCursor(0, 0);
   display.setTextSize(1);
   display.setTextColor(WHITE);
-  display.printf("PM2.5: %.2f ug/m³ => %s", pm25Value, pm25Quality.c_str());
+  display.printf("PM2.5: %.2f ug/m3", pm25Value);
+  display.println();
+  display.printf("Status: %s", pm25Quality.c_str());
   display.println();
   display.printf("CO: %.2f ppm => %s", coValue, coQuality.c_str());
   display.println();
