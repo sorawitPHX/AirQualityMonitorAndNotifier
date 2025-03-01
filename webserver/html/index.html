@@ -1,96 +1,107 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Quality Dashboard</title>
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Air Quality Dashboard</title>
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <!-- <link rel="stylesheet" href="/css/tailwind.css"> -->
 </head>
+
 <body class="bg-gray-100 font-sans">
-    <div class="flex justify-between items-center bg-purple-600 text-white p-4">
-        <div class="flex items-center">
-            <img src="/api/placeholder/30/30" alt="moon icon" class="mr-2" />
-            <h1 class="text-xl font-semibold">Air Quality</h1>
-        </div>
-        <div class="flex items-center">
-            <div class="relative mr-4">
-                <img src="/api/placeholder/25/25" alt="notification icon" />
-                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">2</span>
-            </div>
-            <div class="flex items-center">
-                <img src="/api/placeholder/35/35" alt="user profile" class="w-9 h-9 rounded-full mr-2" />
-                <span>Title Phukritsakon</span>
-            </div>
-        </div>
+  <div class="flex justify-between items-center bg-purple-600 text-white p-4">
+    <div class="flex items-center">
+      <img src="/api/placeholder/30/30" alt="moon icon" class="mr-2" />
+      <h1 class="text-xl font-semibold">Air Quality Monitor Notifier</h1>
     </div>
-    
-    <div class="flex">
-        <div class="w-52 bg-white h-screen shadow-md p-4">
-            <div class="text-gray-500 text-sm mb-2">FEATURES</div>
-            <div class="flex items-center p-3 bg-gray-200 border-l-4 border-purple-600 cursor-pointer">
-                <span class="mr-2">📊</span>
-                <span>Dashboard</span>
-                <span class="ml-auto">▶</span>
-            </div>
-            <div class="absolute bottom-5 w-52 p-3 flex items-center text-gray-500 cursor-pointer">
-                <span class="mr-2">🚪</span>
-                <span>Logout</span>
-            </div>
-        </div>
-        
-        <div class="p-5 w-full">
-            <h1 class="text-2xl font-semibold">Dashboard: อุปกรณ์ที่ 1</h1>
-            <p class="text-gray-600 mb-4">อัปเดตล่าสุด:6 มกราคม 2568 เวลา 00:43:55 น.</p>
-            
-            <div class="bg-red-500 text-white p-4 rounded-lg flex items-center mb-4">
-                <span class="text-2xl mr-2">😷</span>
-                <span>คุณภาพอากาศโดยรวม : มีผลกระทบต่อสุขภาพ</span>
-            </div>
-            
-            <div class="grid grid-cols-3 gap-5 mb-5">
-                <div class="bg-white p-4 rounded-lg shadow-md">
-                    <h3 class="text-purple-600">PM2.5</h3>
-                    <div class="text-3xl font-bold flex items-baseline">
-                        55 <span class="text-lg ml-1">µg/m³</span>
-                    </div>
-                    <div class="text-red-500 text-sm">ค่าฝุ่นละอองสูงเกินมาตรฐาน</div>
-                </div>
-                
-                <div class="bg-white p-4 rounded-lg shadow-md">
-                    <h3 class="text-purple-600">อุณหภูมิ</h3>
-                    <div class="text-3xl font-bold flex items-baseline">
-                        32.2 <span class="text-lg ml-1">°C</span>
-                    </div>
-                    <div class="text-green-500 text-sm">อุณหภูมิปกติ</div>
-                </div>
-                
-                <div class="bg-white p-4 rounded-lg shadow-md">
-                    <h3 class="text-purple-600">ก๊าซคาร์บอนไดออกไซด์</h3>
-                    <div class="text-3xl font-bold flex items-baseline">
-                        35 <span class="text-lg ml-1">ppm</span>
-                    </div>
-                    <div class="text-red-500 text-sm">ค่าคาร์บอนมอนอกไซด์สูงเกินมาตรฐาน</div>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-5 mb-5">
-                <div class="bg-white p-4 rounded-lg shadow-md">
-                    <h3 class="text-purple-600">ก๊าซพิษ</h3>
-                    <div class="text-3xl font-bold flex items-baseline">
-                        34 <span class="text-lg ml-1">ppm</span>
-                    </div>
-                    <div class="text-red-500 text-sm">ค่าสูงเกินมาตรฐาน</div>
-                </div>
-                <div class="bg-white p-4 rounded-lg shadow-md">
-                    <h3 class="text-purple-600">ก๊าซพิษ</h3>
-                    <div class="text-3xl font-bold flex items-baseline">
-                        34 <span class="text-lg ml-1">ppm</span>
-                    </div>
-                    <div class="text-red-500 text-sm">ค่าสูงเกินมาตรฐาน</div>
-                </div>
-            </div>
-        </div>
+    <div class="flex items-center">
+      <div class="relative mr-4">
+        <img src="/api/placeholder/25/25" alt="notification icon" />
+        <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">2</span>
+      </div>
+      <div class="flex items-center">
+        <img src="/api/placeholder/35/35" alt="user profile" class="w-9 h-9 rounded-full mr-2" />
+        <span>Title Phukritsakon</span>
+      </div>
     </div>
+  </div>
+
+  <div class="flex">
+    <div class="w-52 bg-white h-screen shadow-md p-4">
+      <div class="text-sm text-green-500 mb-2">FEATURES</div>
+      <div class="flex items-center p-3 bg-gray-200 border-l-4 border-purple-600 cursor-pointer">
+        <span class="mr-2">📊</span>
+        <span>Dashboard</span>
+        <span class="ml-auto">▶</span>
+      </div>
+      <div class="absolute bottom-5 w-52 p-3 flex items-center text-gray-500 cursor-pointer">
+        <span class="mr-2">🚪</span>
+        <span>Logout</span>
+      </div>
+    </div>
+
+    <div class="p-5 w-full">
+      <h1 class="text-2xl font-semibold">Dashboard: อุปกรณ์ที่ 1</h1>
+      <p class="text-gray-600 mb-4">อัปเดตล่าสุด:6 มกราคม 2568 เวลา 00:43:55 น.</p>
+
+      <div class="bg-red-500 text-white p-4 rounded-lg flex items-center mb-4">
+        <span class="text-2xl mr-2">😷</span>
+        <span>คุณภาพอากาศโดยรวม : มีผลกระทบต่อสุขภาพ</span>
+      </div>
+
+      <div id="card-container">
+        <div class="grid md:grid-cols-3 gap-5 mb-5">
+          <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="pm25Card">
+            <h3 class="text-purple-600">PM2.5</h3>
+            <div class="text-3xl font-bold flex items-baseline">
+              <span name="value"></span>
+              <span class="text-lg ml-1" name="unit"></span>
+            </div>
+            <div class="text-sm text-green-500" name="quality">าฝุ่นละอองสูงเกินมาตรฐาน</div>
+          </div>
+
+          <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="co2Card">
+            <h3 class="text-purple-600">ก๊าซคาร์บอนไดออกไซด์ (CO<sub>2</sub>)</h3>
+            <div class="text-3xl font-bold flex items-baseline">
+              <span name="value"></span>
+              <span class="text-lg ml-1" name="unit"></span>
+            </div>
+            <div class="text-sm text-green-500" name="quality">อุณหภูมิปกติ</div>
+          </div>
+
+          <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="coCard">
+            <h3 class="text-purple-600">คาร์บอนมอนอกไซด์ (CO)</h3>
+            <div class="text-3xl font-bold flex items-baseline">
+              <span name="value"></span>
+              <span class="text-lg ml-1" name="unit"></span>
+            </div>
+            <div class="text-sm text-green-500" name="quality">าคาร์บอนมอนอกไซด์สูงเกินมาตรฐาน</div>
+          </div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-5 mb-5">
+          <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="temperatureCard">
+            <h3 class="text-purple-600">อุณหภูมิ</h3>
+            <div class="text-3xl font-bold flex items-baseline">
+              <span name="value"></span>
+              <span class="text-lg ml-1" name="unit"></span>
+            </div>
+            <div class="text-sm text-green-500" name="quality">าสูงเกินมาตรฐาน</div>
+          </div>
+          <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="humidCard">
+            <h3 class="text-purple-600">ความชื้น</h3>
+            <div class="text-3xl font-bold flex items-baseline">
+              <span name="value"></span>
+              <span class="text-lg ml-1" name="unit"></span>
+            </div>
+            <div class="text-sm text-green-500" name="quality">าสูงเกินมาตรฐาน</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 <script src="/mqtt.min.js"></script>
 <script src="/js/mqtt_sub.js"></script>
+
 </html>
