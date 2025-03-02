@@ -561,7 +561,8 @@ void loop() {
   static unsigned long previousMainLoop = 0;
   if (millis() - previousMainLoop >= 2000) {
     previousMainLoop = millis();
-    pm25Value = readDustSensor();
+    float bufferPM25Value = readDustSensor();
+    if(bufferPM25Value > 0) pm25Value = bufferPM25Value;
     co2Value = readMQ135("CO2");
     coValue = readMQ7();
     dhtValue = readDHT11();

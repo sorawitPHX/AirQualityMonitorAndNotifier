@@ -42,7 +42,10 @@
     </div>
 
     <div class="p-5 w-full">
-      <h1 class="text-2xl font-semibold">Dashboard: อุปกรณ์ที่ 1</h1>
+        <div class="flex flex-row">
+            <h1 class="text-2xl font-semibold">Dashboard: อุปกรณ์ที่ 1</h1>
+            <button id="notifyButton" class="ms-auto">อณุญาติการแจ้งเตือน</button>
+        </div>
       <p class="text-gray-600 mb-4">อัปเดตล่าสุด:6 มกราคม 2568 เวลา 00:43:55 น.</p>
 
       <div class="bg-red-500 text-white p-4 rounded-lg flex items-center mb-4">
@@ -53,6 +56,9 @@
       <div id="card-container">
         <div class="grid md:grid-cols-3 gap-5 mb-5">
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="pm25Card">
+            <div class="text-sm text-gray-500">
+                อัปเดตล่าสุด <span name="updatedTime"></span>
+            </div>
             <h3 class="text-purple-600">PM2.5</h3>
             <div class="text-3xl font-bold flex items-baseline">
               <span name="value"></span>
@@ -62,6 +68,9 @@
           </div>
 
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="co2Card">
+            <div class="text-sm text-gray-500">
+                อัปเดตล่าสุด <span name="updatedTime"></span>
+            </div>
             <h3 class="text-purple-600">ก๊าซคาร์บอนไดออกไซด์ (CO<sub>2</sub>)</h3>
             <div class="text-3xl font-bold flex items-baseline">
               <span name="value"></span>
@@ -71,6 +80,9 @@
           </div>
 
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="coCard">
+            <div class="text-sm text-gray-500">
+                อัปเดตล่าสุด <span name="updatedTime"></span>
+            </div>
             <h3 class="text-purple-600">คาร์บอนมอนอกไซด์ (CO)</h3>
             <div class="text-3xl font-bold flex items-baseline">
               <span name="value"></span>
@@ -81,6 +93,9 @@
         </div>
         <div class="grid md:grid-cols-2 gap-5 mb-5">
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="temperatureCard">
+            <div class="text-sm text-gray-500">
+                อัปเดตล่าสุด <span name="updatedTime"></span>
+            </div>
             <h3 class="text-purple-600">อุณหภูมิ</h3>
             <div class="text-3xl font-bold flex items-baseline">
               <span name="value"></span>
@@ -89,6 +104,9 @@
             <div class="text-sm text-green-500" name="quality">าสูงเกินมาตรฐาน</div>
           </div>
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="humidCard">
+            <div class="text-sm text-gray-500">
+                อัปเดตล่าสุด <span name="updatedTime"></span>
+            </div>
             <h3 class="text-purple-600">ความชื้น</h3>
             <div class="text-3xl font-bold flex items-baseline">
               <span name="value"></span>
@@ -100,8 +118,10 @@
       </div>
     </div>
   </div>
+  <audio id="audioPlayer" hidden controls></audio>
 </body>
 <script src="/mqtt.min.js"></script>
 <script src="/js/mqtt_sub.js"></script>
+
 
 </html>
