@@ -25,6 +25,7 @@ using namespace std;
 // WiFi
 const char* ssid = "sorawitph";
 const char* password = "12345678";
+String statusWifi = "Disconnected";
 
 // MQTT
 const char* mqtt_server = "broker.mqtt.cool";
@@ -359,7 +360,9 @@ void printOLED(
   float humidity,
   String humidLevel,
   float temp,
-  String tempLevel) {
+  String tempLevel,
+  String statusWifi) {
+
   static int displayState = 0;  // ใช้เก็บ state ของค่าที่กำลังแสดงผล
   const long interval = 5000;   // ระยะเวลาที่ต้องการหน่วง จักวิกะได้หรรมเอ้ย
   unsigned long currentMillis = millis();
@@ -387,6 +390,11 @@ void printOLED(
       displayData("Temp.", temp, tempLevel);
       break;
   }
+
+  display.setCursor(0, 55);
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.print(statusWifi);
 
   display.display();
 }
@@ -608,6 +616,7 @@ void loop() {
 
     if (WiFi.status() != WL_CONNECTED) {
       reconnectWiFi();
+      statusWifi = "Connecting";
     } else {
       jsonSize = serializeJson(pm25Doc, jsonStr);
       if (!client.publish(mqtt_path_pm25.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish pm2.5 failed!"); }
@@ -619,6 +628,7 @@ void loop() {
       if (!client.publish(mqtt_path_temperature.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish temperature failed!"); }
       jsonSize = serializeJson(humidDoc, jsonStr);
       if (!client.publish(mqtt_path_humid.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish humid failed!"); }
+      statusWifi = "Connected";
     }
     // ✅ ตรวจสอบและเชื่อมต่อ MQTT ใหม่ถ้าหลุด (ไม่บล็อก)
     if (!client.connected()) {
@@ -631,8 +641,8 @@ void loop() {
   display.clearDisplay();
   // erase status bar by drawing all black
   display.fillRect(0, 0, display.width(), 8, SSD1306_BLACK);
-  // print all value to OLED
-  printOLED(pm25Value, pm25Quality, coValue, coQuality, co2Value, co2Quality, dhtValue[0], humidLevel, dhtValue[1], tempLevel);
+  // print all value to OLED including show status 
+  printOLED(pm25Value, pm25Quality, coValue, coQuality, co2Value, co2Quality, dhtValue[0], humidLevel, dhtValue[1], tempLevel, statusWifi);
 
   delay(DELAY_LOOP_MS);
 }
