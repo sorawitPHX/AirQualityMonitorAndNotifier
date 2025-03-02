@@ -1,3 +1,10 @@
+#include <Arduino.h>
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
+#define SERVICE_UUID "12345678-1234-5678-1234-56789abcdef0"
+#define CHARACTERISTIC_UUID "abcdef01-1234-5678-1234-56789abcdef0"
 #include <array>
 #include <DHT.h>
 #include <WiFi.h>
@@ -78,6 +85,18 @@ String tempLevel;
 
 // DHT config
 DHT dht(DHT11Pin, DHTType);
+
+BLECharacteristic* sensorCharacteristic;
+bool deviceConnected = false;
+class MyServerCallbacks : public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) {
+    deviceConnected = true;
+  }
+
+  void onDisconnect(BLEServer* pServer) {
+    deviceConnected = false;
+  }
+};
 
 void ledBlink(int ledPin, unsigned long int& previous, int intervalMilli = 500) {
   pinMode(ledPin, OUTPUT);
@@ -318,37 +337,7 @@ String checkLevelHumid(float value) {
 }
 
 
-void setup() {
-  Serial.begin(9600);
-  pinMode(dustLedPower, OUTPUT);
-  pinMode(dustMeasurePin, INPUT);
-  pinMode(MQ7Pin, INPUT);
-  pinMode(MQ135Pin, INPUT);
-  pinMode(DHT11Pin, INPUT);
 
-  dht.begin();
-  setup_wifi();
-  client.setServer(mqtt_server, mqtt_port);
-  client.setCallback(callback);
-
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) {  // Address 0x3D for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;)
-      ;  // Don't proceed, loop forever
-  }
-
-  // Clear the buffer
-  display.clearDisplay();
-
-  display.setTextSize(1);
-  display.setTextColor(WHITE, BLACK);
-  display.setCursor(0, 0);
-  display.println("Screen initialized!");
-  display.display();
-  delay(500);
-  display.clearDisplay();
-}
 
 void printOLED(
   float pm25Value,
@@ -557,12 +546,55 @@ void displayData(String title, float value, String quality) {
   display.print(quality);
 }
 
+void setup() {
+  Serial.begin(9600);
+  pinMode(dustLedPower, OUTPUT);
+  pinMode(dustMeasurePin, INPUT);
+  pinMode(MQ7Pin, INPUT);
+  pinMode(MQ135Pin, INPUT);
+  pinMode(DHT11Pin, INPUT);
+
+  dht.begin();
+  setup_wifi();
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(callback);
+
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) {  // Address 0x3D for 128x64
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;)
+      ;  // Don't proceed, loop forever
+  }
+
+  // Clear the buffer
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE, BLACK);
+  display.setCursor(0, 0);
+  display.println("Screen initialized!");
+  display.display();
+  delay(500);
+  display.clearDisplay();
+
+  BLEDevice::init((String("AirQualityMonitorNotifier_") + device_id).c_str());
+  BLEServer* pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+  BLEService* pService = pServer->createService(SERVICE_UUID);
+  sensorCharacteristic = pService->createCharacteristic(
+    CHARACTERISTIC_UUID,
+    BLECharacteristic::PROPERTY_NOTIFY);
+  sensorCharacteristic->addDescriptor(new BLE2902());
+  pService->start();
+  pServer->getAdvertising()->start();
+  Serial.println("BLE Server Started");
+}
+
 void loop() {
   static unsigned long previousMainLoop = 0;
   if (millis() - previousMainLoop >= 2000) {
     previousMainLoop = millis();
     float bufferPM25Value = readDustSensor();
-    if(bufferPM25Value > 0) pm25Value = bufferPM25Value;
+    if (bufferPM25Value > 0) pm25Value = bufferPM25Value;
     co2Value = readMQ135("CO2");
     coValue = readMQ7();
     dhtValue = readDHT11();
@@ -615,6 +647,48 @@ void loop() {
     size_t jsonSize;
     bool success;
 
+    if (deviceConnected) {
+      // สร้าง JSON document ขนาดใหญ่พอสมควร
+      StaticJsonDocument<512> dataDoc;
+
+      // ใส่ค่าฝุ่น PM2.5
+      JsonObject pm25Obj = dataDoc.createNestedObject("pm25");
+      pm25Obj["unit"] = "ug/m³";
+      pm25Obj["value"] = pm25Value;
+      pm25Obj["quality"] = pm25Quality;
+
+      // ใส่ค่า CO2
+      JsonObject co2Obj = dataDoc.createNestedObject("co2");
+      co2Obj["unit"] = "ppm";
+      co2Obj["value"] = co2Value;
+      co2Obj["quality"] = co2Quality;
+
+      // ใส่ค่า CO
+      JsonObject coObj = dataDoc.createNestedObject("co");
+      coObj["unit"] = "ppm";
+      coObj["value"] = coValue;
+      coObj["quality"] = coQuality;
+
+      // ใส่ค่า Humidity
+      JsonObject humidObj = dataDoc.createNestedObject("humidity");
+      humidObj["unit"] = "%";
+      humidObj["value"] = dhtValue[0];
+      humidObj["quality"] = humidLevel;
+
+      // ใส่ค่า Temperature
+      JsonObject tempObj = dataDoc.createNestedObject("temperature");
+      tempObj["unit"] = "*C";
+      tempObj["value"] = dhtValue[1];
+      tempObj["quality"] = tempLevel;
+
+      char compactDataStr[512];
+      jsonSize = serializeJson(dataDoc, compactDataStr);
+
+      sensorCharacteristic->setValue((uint8_t*)compactDataStr, jsonSize);
+      sensorCharacteristic->notify();
+      Serial.println("Sent JSON via BLE");
+    }
+
     if (WiFi.status() != WL_CONNECTED) {
       reconnectWiFi();
       statusWifi = "Connecting";
@@ -642,7 +716,7 @@ void loop() {
   display.clearDisplay();
   // erase status bar by drawing all black
   display.fillRect(0, 0, display.width(), 8, SSD1306_BLACK);
-  // print all value to OLED including show status 
+  // print all value to OLED including show status
   printOLED(pm25Value, pm25Quality, coValue, coQuality, co2Value, co2Quality, dhtValue[0], humidLevel, dhtValue[1], tempLevel, statusWifi);
 
   delay(DELAY_LOOP_MS);
