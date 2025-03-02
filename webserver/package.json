@@ -20,6 +20,7 @@
     "@tailwindcss/cli": "^4.0.9",
     "autoprefixer": "^10.4.20",
     "axios": "^1.8.1",
+    "bootstrap-icons": "^1.11.3",
     "express": "^4.21.2",
     "google-tts-api": "^2.0.2",
     "mqtt": "^5.10.4",

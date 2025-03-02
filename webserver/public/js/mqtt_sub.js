@@ -196,9 +196,37 @@ function showNotification(title, message) {
 
 // ตัวอย่างการเรียกใช้
 document.getElementById('notifyButton').addEventListener('click', async () => {
-    // ขอสิทธิ์การแจ้งเตือน
     await requestNotificationPermission();
-
-    // แสดงการแจ้งเตือนหลังจากที่ได้รับสิทธิ์
     showNotification('แจ้งเตือน!', 'คุณภาพอากาศไม่ดี');
 });
+
+async function connectBLE() {
+    try {
+      // ขอให้ผู้ใช้เลือกอุปกรณ์ BLE
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: ['12345678-1234-5678-1234-56789abcdef0']
+      });
+
+      // เชื่อมต่อกับ GATT Server
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService('12345678-1234-5678-1234-56789abcdef0');
+      const characteristic = await service.getCharacteristic('12345678-1234-5678-1234-56789abcdef1');
+
+      // อ่านค่าเริ่มต้น
+      const value = await characteristic.readValue();
+      document.getElementById('sensorValue').innerText = new TextDecoder().decode(value);
+
+      // ตั้งค่าการแจ้งเตือนเมื่อค่าเปลี่ยนแปลง
+      characteristic.addEventListener('characteristicvaluechanged', (event) => {
+        const newValue = new TextDecoder().decode(event.target.value);
+        document.getElementById('sensorValue').innerText = newValue;
+      });
+
+      await characteristic.startNotifications(); // เปิดการแจ้งเตือน
+      console.log("Connected to ESP32 BLE!");
+
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  }

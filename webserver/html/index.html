@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" class="light">
 
 <head>
   <meta charset="UTF-8">
@@ -7,6 +7,7 @@
   <title>Air Quality Dashboard</title>
   <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
   <!-- <link rel="stylesheet" href="/css/tailwind.css"> -->
+  <link rel="stylesheet" href="/bootstrap-icons/bootstrap-icons.min.css">
 </head>
 
 <body class="bg-gray-100 font-sans">
@@ -29,7 +30,7 @@
 
   <div class="flex">
     <div class="w-52 bg-white h-screen shadow-md p-4">
-      <div class="text-sm text-green-500 mb-2">FEATURES</div>
+      <div class="text-sm text-green-500 mb-2">Menu</div>
       <div class="flex items-center p-3 bg-gray-200 border-l-4 border-purple-600 cursor-pointer">
         <span class="mr-2">📊</span>
         <span>Dashboard</span>
@@ -42,12 +43,27 @@
     </div>
 
     <div class="p-5 w-full">
-        <div class="flex flex-row">
-            <h1 class="text-2xl font-semibold">Dashboard: อุปกรณ์ที่ 1</h1>
-            <button id="notifyButton" class="ms-auto">อณุญาติการแจ้งเตือน</button>
-        </div>
-      <p class="text-gray-600 mb-4">อัปเดตล่าสุด:6 มกราคม 2568 เวลา 00:43:55 น.</p>
+      <div class="grid grid-cols-2 mb-4">
+        <form class="flex items-center gap-3">
+          <label for="selectMode" class="text- font-medium text-gray-900">เลือกโหมด: </label>
+          <select id="selectMode" class=" max-w-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 w-full p-2.5">
+            <option value="mqtt">MQTT</option>
+            <option value="bluetooth">Bluetooth</option>
+          </select>
+        </form>
+        <button id="notifyButton" class="ms-auto border rounded-lg p-2 hover:bg-black hover:text-white transition duration-300 ease-in-out">
+          <i class="bi bi-bell-fill"></i>
+          อนุญาตการแจ้งเตือน
+        </button>
+      </div>
+      <div class="mb-4">
+        <button type="button" onclick="connectBLE()" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2">
+          <i class="bi bi-bluetooth"></i>
+          ค้นหาอุปกรณ์ Bluetooth
+        </button>
+      </div>
 
+      <p class="text-gray-600 mb-4">อัปเดตล่าสุด:6 มกราคม 2568 เวลา 00:43:55 น.</p>
       <div class="bg-red-500 text-white p-4 rounded-lg flex items-center mb-4">
         <span class="text-2xl mr-2">😷</span>
         <span>คุณภาพอากาศโดยรวม : มีผลกระทบต่อสุขภาพ</span>
@@ -57,7 +73,7 @@
         <div class="grid md:grid-cols-3 gap-5 mb-5">
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="pm25Card">
             <div class="text-sm text-gray-500">
-                อัปเดตล่าสุด <span name="updatedTime"></span>
+              อัปเดตล่าสุด <span name="updatedTime"></span>
             </div>
             <h3 class="text-purple-600">PM2.5</h3>
             <div class="text-3xl font-bold flex items-baseline">
@@ -69,7 +85,7 @@
 
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="co2Card">
             <div class="text-sm text-gray-500">
-                อัปเดตล่าสุด <span name="updatedTime"></span>
+              อัปเดตล่าสุด <span name="updatedTime"></span>
             </div>
             <h3 class="text-purple-600">ก๊าซคาร์บอนไดออกไซด์ (CO<sub>2</sub>)</h3>
             <div class="text-3xl font-bold flex items-baseline">
@@ -81,7 +97,7 @@
 
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="coCard">
             <div class="text-sm text-gray-500">
-                อัปเดตล่าสุด <span name="updatedTime"></span>
+              อัปเดตล่าสุด <span name="updatedTime"></span>
             </div>
             <h3 class="text-purple-600">คาร์บอนมอนอกไซด์ (CO)</h3>
             <div class="text-3xl font-bold flex items-baseline">
@@ -94,7 +110,7 @@
         <div class="grid md:grid-cols-2 gap-5 mb-5">
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="temperatureCard">
             <div class="text-sm text-gray-500">
-                อัปเดตล่าสุด <span name="updatedTime"></span>
+              อัปเดตล่าสุด <span name="updatedTime"></span>
             </div>
             <h3 class="text-purple-600">อุณหภูมิ</h3>
             <div class="text-3xl font-bold flex items-baseline">
@@ -105,7 +121,7 @@
           </div>
           <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-transparent" id="humidCard">
             <div class="text-sm text-gray-500">
-                อัปเดตล่าสุด <span name="updatedTime"></span>
+              อัปเดตล่าสุด <span name="updatedTime"></span>
             </div>
             <h3 class="text-purple-600">ความชื้น</h3>
             <div class="text-3xl font-bold flex items-baseline">
@@ -120,7 +136,7 @@
   </div>
   <audio id="audioPlayer" hidden controls></audio>
 </body>
-<script src="/mqtt.min.js"></script>
+<script src="/mqtt/mqtt.min.js"></script>
 <script src="/js/mqtt_sub.js"></script>
 
 
