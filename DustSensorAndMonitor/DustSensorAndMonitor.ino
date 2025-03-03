@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <WiFiManager.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -24,6 +25,9 @@
 #define OLED_RESET 4
 #define MQTT_MAX_PACKET_SIZE 512
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// Wifi Manager
+WiFiManager wm;
 
 const int DELAY_LOOP_MS = 5;  // change to slow down how often to read
 
@@ -88,6 +92,7 @@ DHT dht(DHT11Pin, DHTType);
 
 BLECharacteristic* sensorCharacteristic;
 bool deviceConnected = false;
+bool resetWiFi = false;  // ตัวแปรสำหรับตรวจจับคำสั่งรีเซ็ต
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
@@ -95,6 +100,25 @@ class MyServerCallbacks : public BLEServerCallbacks {
 
   void onDisconnect(BLEServer* pServer) {
     deviceConnected = false;
+    pServer->getAdvertising()->start();
+  }
+};
+
+class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic* pCharacteristic) {
+    String value = pCharacteristic->getValue();
+    Serial.print("Received via RAW: ");
+    Serial.println(value);
+    if (value.length() > 0) {
+      Serial.print("Received via BLE: ");
+      Serial.println(value);
+
+      // ถ้าได้รับคำสั่ง "RESET_WIFI" ให้เคลียร์ค่า WiFi
+      if (value.equals("RESET_WIFI")) {
+        Serial.println("Resetting WiFi settings...");
+        resetWiFi = true;
+      }
+    }
   }
 };
 
@@ -555,7 +579,21 @@ void setup() {
   pinMode(DHT11Pin, INPUT);
 
   dht.begin();
-  setup_wifi();
+
+  // wm.resetSettings();
+  // set esp as Access Point (AP)
+  if (wm.autoConnect((String("AirQualityMonitorNotifier_") + device_id).c_str())) {
+    Serial.println("");
+    Serial.println("Connected already WiFi :) ");
+    Serial.println("IP Address : ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("failed to connect and hit timeout");
+    delay(1000);
+    ESP.restart();
+  }
+
+  //setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
 
@@ -583,6 +621,10 @@ void setup() {
   sensorCharacteristic = pService->createCharacteristic(
     CHARACTERISTIC_UUID,
     BLECharacteristic::PROPERTY_NOTIFY);
+  BLECharacteristic* pCharacteristic = pService->createCharacteristic(
+    CHARACTERISTIC_UUID,
+    BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+  pCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
   sensorCharacteristic->addDescriptor(new BLE2902());
   pService->start();
   pServer->getAdvertising()->start();
@@ -591,6 +633,16 @@ void setup() {
 
 void loop() {
   static unsigned long previousMainLoop = 0;
+  // ถ้าพบคำสั่งให้รีเซ็ต WiFi
+  //Serial.println(resetWiFi);
+  if (resetWiFi) {
+    display.clearDisplay();
+    wm.resetSettings();  // เคลียร์ค่า WiFi
+    Serial.println("WiFi settings cleared. Restarting...");
+    delay(2000);
+    ESP.restart();  // รีสตาร์ท ESP32
+  }
+
   if (millis() - previousMainLoop >= 2000) {
     previousMainLoop = millis();
     float bufferPM25Value = readDustSensor();
@@ -670,7 +722,7 @@ void loop() {
       coObj["quality"] = coQuality;
 
       // ใส่ค่า Humidity
-      JsonObject humidObj = dataDoc.createNestedObject("humidity");
+      JsonObject humidObj = dataDoc.createNestedObject("humid");
       humidObj["unit"] = "%";
       humidObj["value"] = dhtValue[0];
       humidObj["quality"] = humidLevel;
@@ -690,7 +742,7 @@ void loop() {
     }
 
     if (WiFi.status() != WL_CONNECTED) {
-      reconnectWiFi();
+      //reconnectWiFi();
       statusWifi = "Connecting";
     } else {
       jsonSize = serializeJson(pm25Doc, jsonStr);
