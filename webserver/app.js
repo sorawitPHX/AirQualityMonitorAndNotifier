@@ -56,6 +56,7 @@ wss.on('connection', ws => {
 app.use(express.static(path.join(__dirname, 'public')))
 app.use('/mqtt', express.static(path.join(__dirname, 'node_modules', 'mqtt', 'dist')))
 app.use('/bootstrap-icons', express.static(path.join(__dirname, 'node_modules', 'bootstrap-icons', 'font')))
+app.use('/flowbite', express.static(path.join(__dirname, 'node_modules', 'flowbite', 'dist')))
 app.use(express.json());
 
 app.get('/', (req, res) => {
