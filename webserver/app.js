@@ -7,7 +7,7 @@ const WebSocket = require('ws')
 const googleTTS = require('google-tts-api')
 const axios = require('axios')
 
-const PORT = 3000
+const PORT = process.env.PORT || 3000; // ใช้ process.env.PORT จาก cPanel
 const mqtt_broker = 'mqtt://broker.mqtt.cool'
 
 const app = express()
