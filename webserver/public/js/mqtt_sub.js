@@ -1,6 +1,7 @@
 let url = window.location.href
 url = url.replace(/(http:\/\/|https:\/\/)/, '').replace(/\/\?.*/, '')
-const ws = new WebSocket(`wss://${url}`);
+let ws_protocal = window.location.protocol == 'https:' ? 'wss:' : 'ws:'
+const ws = new WebSocket(`${ws_protocal}//${url}`);
 const urlParams = new URLSearchParams(window.location.search);
 let mode = urlParams.get('mode') || 'mqtt';
 const gasQualityColors = {

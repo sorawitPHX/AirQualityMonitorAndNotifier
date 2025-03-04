@@ -21,7 +21,7 @@ const mqttClient = mqtt.connect(mqtt_broker, {
 
 mqttClient.on('connect', () => {
     try {
-        console.log(`Connected to mqtt ${mqtt_broker}`)
+        console.log(`Connected to mqtt ${mqtt_broker} ${new Date().toISOString()}`)
         mqttClient.subscribe("airqualitynotifyer/1/#");
     } catch (error) {
         console.error(error)
