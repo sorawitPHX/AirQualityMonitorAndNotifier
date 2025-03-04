@@ -1,5 +1,5 @@
-#include <Arduino.h>
 #include <WiFiManager.h>
+#include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -28,6 +28,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Wifi Manager
 WiFiManager wm;
+bool portalRunning = false;
 
 const int DELAY_LOOP_MS = 5;  // change to slow down how often to read
 
@@ -360,9 +361,6 @@ String checkLevelHumid(float value) {
   }
 }
 
-
-
-
 void printOLED(
   float pm25Value,
   String pm25Quality,
@@ -572,6 +570,8 @@ void displayData(String title, float value, String quality) {
 
 void setup() {
   Serial.begin(9600);
+  WiFi.mode(WIFI_STA); // ตั้งค่าให้ ESP ใช้โหมด Station (STA)
+
   pinMode(dustLedPower, OUTPUT);
   pinMode(dustMeasurePin, INPUT);
   pinMode(MQ7Pin, INPUT);
@@ -579,19 +579,6 @@ void setup() {
   pinMode(DHT11Pin, INPUT);
 
   dht.begin();
-
-  // wm.resetSettings();
-  // set esp as Access Point (AP)
-  if (wm.autoConnect((String("AirQualityMonitorNotifier_") + device_id).c_str())) {
-    Serial.println("");
-    Serial.println("Connected already WiFi :) ");
-    Serial.println("IP Address : ");
-    Serial.println(WiFi.localIP());
-  } else {
-    Serial.println("failed to connect and hit timeout");
-    delay(1000);
-    ESP.restart();
-  }
 
   //setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
@@ -629,10 +616,28 @@ void setup() {
   pService->start();
   pServer->getAdvertising()->start();
   Serial.println("BLE Server Started");
+
+  // set esp as Access Point (AP)
+  wm.setConfigPortalBlocking(false); // ทำให้ Config Portal ไม่บล็อกการทำงานของ loop()
+
+  if (wm.autoConnect((String("AirQualityMonitorNotifier_") + device_id).c_str())) {
+    Serial.println("");
+    Serial.println("Connected already WiFi :) ");
+    Serial.println("IP Address : ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("Config Portal is running...");
+    portalRunning = true;
+  }
 }
 
 void loop() {
   static unsigned long previousMainLoop = 0;
+
+  if(portalRunning) {
+    wm.process();
+  }
+
   // ถ้าพบคำสั่งให้รีเซ็ต WiFi
   //Serial.println(resetWiFi);
   if (resetWiFi) {
@@ -745,22 +750,23 @@ void loop() {
       //reconnectWiFi();
       statusWifi = "Connecting";
     } else {
-      jsonSize = serializeJson(pm25Doc, jsonStr);
-      if (!client.publish(mqtt_path_pm25.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish pm2.5 failed!"); }
-      jsonSize = serializeJson(co2Doc, jsonStr);
-      if (!client.publish(mqtt_path_co2.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish co2 failed!"); }
-      jsonSize = serializeJson(coDoc, jsonStr);
-      if (!client.publish(mqtt_path_co.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish co failed!"); }
-      jsonSize = serializeJson(temperatureDoc, jsonStr);
-      if (!client.publish(mqtt_path_temperature.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish temperature failed!"); }
-      jsonSize = serializeJson(humidDoc, jsonStr);
-      if (!client.publish(mqtt_path_humid.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish humid failed!"); }
-      statusWifi = "Connected";
+      if (!client.connected()) {
+        reconnectMQTT();
+      } else {
+        jsonSize = serializeJson(pm25Doc, jsonStr);
+        if (!client.publish(mqtt_path_pm25.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish pm2.5 failed!"); }
+        jsonSize = serializeJson(co2Doc, jsonStr);
+        if (!client.publish(mqtt_path_co2.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish co2 failed!"); }
+        jsonSize = serializeJson(coDoc, jsonStr);
+        if (!client.publish(mqtt_path_co.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish co failed!"); }
+        jsonSize = serializeJson(temperatureDoc, jsonStr);
+        if (!client.publish(mqtt_path_temperature.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish temperature failed!"); }
+        jsonSize = serializeJson(humidDoc, jsonStr);
+        if (!client.publish(mqtt_path_humid.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish humid failed!"); }
+        statusWifi = "Internet Online";
+      }
     }
     // ✅ ตรวจสอบและเชื่อมต่อ MQTT ใหม่ถ้าหลุด (ไม่บล็อก)
-    if (!client.connected()) {
-      reconnectMQTT();
-    }
   }
 
   client.loop();
@@ -771,5 +777,5 @@ void loop() {
   // print all value to OLED including show status
   printOLED(pm25Value, pm25Quality, coValue, coQuality, co2Value, co2Quality, dhtValue[0], humidLevel, dhtValue[1], tempLevel, statusWifi);
 
-  delay(DELAY_LOOP_MS);
+  // delay(DELAY_LOOP_MS);
 }
