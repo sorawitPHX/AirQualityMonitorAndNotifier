@@ -60,7 +60,7 @@ app.use('/flowbite', express.static(path.join(__dirname, 'node_modules', 'flowbi
 app.use(express.json());
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'html', 'index.html'))
+    res.sendFile(path.join(__dirname, 'views', 'index.html'))
 })
 
 app.post('/convert-text-to-speech', async (req, res) => {

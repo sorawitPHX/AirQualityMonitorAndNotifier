@@ -11,6 +11,21 @@
 </head>
 
 <body class="bg-gray-100 font-sans">
+  <!-- Modal -->
+  <div id="imageModal" tabindex="-1" aria-hidden="true" class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[100vh] bg-opacity-50">
+    <div class="relative w-full max-w-2xl mx-auto mt-20 bg-white rounded-lg shadow-lg">
+      <!-- ปุ่มปิด -->
+      <button type="button" class="absolute top-3 right-3 text-gray-400 bg-transparent hover:text-gray-600" data-modal-hide="imageModal">
+        ✕
+      </button>
+      <!-- เนื้อหาใน Modal -->
+      <div class="p-6 text-center max-h-[80vh] overflow-y-auto">
+        <h2 class="text-lg font-semibold">ตารางเปรียบเทียบค่า AQI-Overall และคุณภาพอากาศ</h2>
+        <img src="/images/aqiOverallTable.png" alt="AQI Overall Table" class="mt-4 rounded-lg mx-auto">
+        <img src="/images/colorforAQIOverall.png" alt="AQI Overall Colors" class="mt-4 rounded-lg h-52 mx-auto">
+      </div>
+    </div>
+  </div>
   <div class="container">
     <nav class="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
       <div class="px-3 py-3 lg:px-5 lg:pl-3">
@@ -122,6 +137,7 @@
           <span class="text-2xl mr-2 font-bold" id="AQIValue"></span>
           <span class="text-2xl bg-white mr-1 rounded-full" id="AQIEmoji"></span>
           <span><span id="AQIQuality"></span></span>
+          <button type="button" data-modal-target="imageModal" data-modal-toggle="imageModal" class="ms-auto rounded bg-black">❔</button>
         </div>
 
         <div id="card-container">
@@ -193,6 +209,8 @@
       </div>
     </main>
   </div>
+
+  
 </body>
 <script>
   document.addEventListener("DOMContentLoaded", function() {

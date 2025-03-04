@@ -1,5 +1,5 @@
 let url = window.location.href
-url = url.replace(/http.?\/\//, '')
+url = url.replace(/(http:\/\/|https:\/\/)/, '').replace(/\/\?.*/, '')
 const ws = new WebSocket(`ws://${url}`);
 const urlParams = new URLSearchParams(window.location.search);
 let mode = urlParams.get('mode') || 'mqtt';
