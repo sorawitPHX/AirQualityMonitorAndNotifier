@@ -8,6 +8,7 @@
 #define CHARACTERISTIC_UUID "abcdef01-1234-5678-1234-56789abcdef0"
 #include <array>
 #include <DHT.h>
+#include <MQ135.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -39,6 +40,7 @@ using namespace std;
 const char* ssid = "sorawitph";
 const char* password = "12345678";
 String statusWifi = "Disconnected";
+String statusInternet = "offline";
 
 // MQTT
 const char* mqtt_server = "broker.mqtt.cool";
@@ -50,6 +52,7 @@ const String mqtt_path_co2 = "airqualitynotifyer/" + device_id + "/co2";
 const String mqtt_path_co = "airqualitynotifyer/" + device_id + "/co";
 const String mqtt_path_temperature = "airqualitynotifyer/" + device_id + "/temperature";
 const String mqtt_path_humid = "airqualitynotifyer/" + device_id + "/humid";
+const String mqtt_path_statusESP = "airqualitynotifyer/" + device_id + "/status";
 String clientID = "ESP32_Client_" + String(random(1000, 9999));
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -57,7 +60,8 @@ PubSubClient client(espClient);
 int dustMeasurePin = 34;
 int dustLedPower = 2;
 int MQ7Pin = 35;
-int MQ135Pin = 32;
+int MQ135Pin = 33;
+MQ135 mq135_sensor = MQ135(33);  
 int DHT11Pin = 19;
 int DHTType = DHT11;
 int sdaPin = 21;
@@ -75,6 +79,10 @@ int sleepTime = 9680;
 float voMeasured = 0;
 float calcVoltage = 0;
 float dustDensity = 0;
+
+float dustEMA = 0; // เก็บค่าฝุ่นแบบ EMA
+const float alpha = 0.2; // ค่าการกรอง EMA (0.1 - 0.3 กำลังดี)
+const int numReadings = 10; // จำนวนรอบที่ใช้ค่าเฉลี่ยแบบ Moving Average
 
 unsigned long previousMillis = 0;
 
@@ -190,14 +198,43 @@ void reconnectMQTT() {
   if (now - lastAttempt > 5000) {
     lastAttempt = now;
     Serial.println("กำลังเชื่อมต่อ MQTT...");
-    if (client.connect(clientID.c_str())) {
+    if (client.connect(clientID.c_str(), NULL, NULL, mqtt_path_statusESP.c_str(), 0, true, "{\"status\":\"offline\"}")) {
       Serial.println("MQTT เชื่อมต่อสำเร็จ!");
+      sendStatus("online");
       client.subscribe("test/topic");
     } else {
       Serial.print("MQTT เชื่อมต่อไม่สำเร็จ! Error code: ");
       Serial.println(client.state());  // ดูโค้ดข้อผิดพลาด
     }
   }
+}
+
+float readDustSensorEMA() {
+  float total = 0;
+
+  // เปิด LED ของเซ็นเซอร์เพื่อเริ่มวัดฝุ่น
+  digitalWrite(dustLedPower, LOW);
+  delayMicroseconds(samplingTime);
+
+  // อ่านค่าฝุ่นหลายครั้งแล้วใช้ค่าเฉลี่ยแบบ Moving Average
+  for (int i = 0; i < numReadings; i++) {
+    total += analogRead(dustMeasurePin);
+    delayMicroseconds(10); // เว้นช่วงการอ่านเล็กน้อย
+  }
+
+  // ปิด LED ของเซ็นเซอร์หลังจากวัดค่าเสร็จ
+  digitalWrite(dustLedPower, HIGH);
+  delayMicroseconds(sleepTime);
+
+  // คำนวณค่าฝุ่นจากค่า ADC เฉลี่ย
+  float avgMeasured = total / numReadings;
+  float calcVoltage = avgMeasured * (3.3 / esp32AnalogLevel);
+  float newDustDensity = 170 * calcVoltage - 0.1;
+
+  // ใช้ Exponential Moving Average (EMA) ในการกรองค่า
+  dustEMA = (alpha * newDustDensity) + ((1 - alpha) * dustEMA);
+
+  return dustEMA;
 }
 
 float readDustSensor() {
@@ -227,69 +264,32 @@ float readMQ7() {
   return CO_ppm;
 }
 
-float readMQ135(String gasType) {
-  // หน่วย ppm
-  float rawValue = analogRead(MQ135Pin);
-  // Serial.println(rawValue);
-  float slope, A, R0, a, b;
+// ใช้วัดแค่ CO2 เท่านั้น
+float readMQ135() {
+  // // หน่วย ppm
+  // float rawValue = analogRead(MQ135Pin);
+  // // Serial.println(rawValue);
+  // float slope, A, R0, a, b;
 
-  // กำหนดค่าสัมประสิทธิ์ตามชนิดของก๊าซที่ต้องการวัด
-  // ค่าเหล่านี้อ้างอิงจากข้อมูลทางเทคนิคและการสอบเทียบเซ็นเซอร์ MQ-135
-  gasType = "CO2";
-  if (gasType == "NH3") {
-    slope = -0.263;
-    A = 0.585;
-    R0 = 1800.0;
-  } else if (gasType == "NOx") {
-    slope = -0.245;
-    A = 0.632;
-    R0 = 1850.0;
-  } else if (gasType == "CO2") {
-    slope = -0.318;
-    A = 0.711;
-    R0 = 24743.0;
-    a = 116.602;
-    b = -2.769;
-  } else if (gasType == "Benzene") {
-    slope = -0.276;
-    A = 0.652;
-    R0 = 1820.0;
-  } else if (gasType == "Smoke") {
-    slope = -0.304;
-    A = 0.693;
-    R0 = 1760.0;
-  } else if (gasType == "Alcohol") {
-    slope = -0.292;
-    A = 0.640;
-    R0 = 1730.0;
-  } else if (gasType == "Acetone") {
-    slope = -0.2884453282;
-    A = 2.720027932;
-    R0 = 1809.52;
-  } else if (gasType == "Toluene") {
-    slope = -0.310;
-    A = 0.765;
-    R0 = 1840.0;
-  } else if (gasType == "Formaldehyde") {
-    slope = -0.268;
-    A = 0.690;
-    R0 = 1780.0;
-  } else {
-    // ค่าเริ่มต้นหากไม่ระบุชนิดของก๊าซ
-    slope = -0.318;
-    A = 0.711;
-    R0 = 24743.0;
-    a = 116.602;
-    b = -2.769;  // ใช้ค่า CO2 เป็นค่าเริ่มต้น
-  }
-
-  float R = 2000;
-  float V_Rseries = ((float)rawValue * esp32Voltage) / esp32AnalogLevel;
-  float Rs = ((esp32AnalogLevel * R) / rawValue) - R;
-  float Y = Rs / R0;
-  // Serial.println(Rs);
-  float gasConcentration = a * pow(Y, b);
-  return gasConcentration;
+  // // กำหนดค่าสัมประสิทธิ์ตามชนิดของก๊าซที่ต้องการวัด
+  // // ค่าเหล่านี้อ้างอิงจากข้อมูลทางเทคนิคและการสอบเทียบเซ็นเซอร์ MQ-135
+  // slope = -0.318;
+  // A = 0.711;
+  // R0 = 24743.0;
+  // a = 116.602;
+  // b = -2.769;
+  
+  // float R = 22000;
+  // float V_Rseries = ((float)rawValue * esp32Voltage) / esp32AnalogLevel;
+  // float Rs = ((esp32AnalogLevel * R) / rawValue) - R;
+  // float Y = Rs / R0;
+  // // Serial.println(Rs);
+  // float gasConcentration = a * pow(Y, b);
+  // return gasConcentration;
+  Serial.print("R0 : ");
+  Serial.print(mq135_sensor.getRZero());
+  Serial.println(mq135_sensor.getResistance());
+  return mq135_sensor.getPPM();
 }
 
 array<float, 2> readDHT11() {
@@ -380,6 +380,19 @@ String checkLevelHumid(float value) {
   } else {
     return "Too Humid";
   }
+}
+
+void sendStatus(String status) {
+  StaticJsonDocument<256> statusESPDoc;
+
+  // Status Of ESP32
+  statusESPDoc["status"] = status;
+
+  char jsonStr[256];
+  size_t jsonSize;
+
+  jsonSize = serializeJson(statusESPDoc, jsonStr);
+  if (!client.publish(mqtt_path_statusESP.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish status failed!"); }
 }
 
 void printOLED(
@@ -605,6 +618,12 @@ void setup() {
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
 
+  // ตั้งค่า LWT ให้ Broker ส่ง "offline" ถ้า ESP32 หลุด
+  client.connect(clientID.c_str(), NULL, NULL, mqtt_path_statusESP.c_str(), 0, true, "{\"status\":\"offline\"}");
+
+  // ส่ง "online" เมื่อเชื่อมต่อ MQTT สำเร็จ
+  sendStatus("online");
+
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) {  // Address 0x3D for 128x64
     Serial.println(F("SSD1306 allocation failed"));
@@ -671,9 +690,9 @@ void loop() {
 
   if (millis() - previousMainLoop >= 2000) {
     previousMainLoop = millis();
-    float bufferPM25Value = readDustSensor();
+    float bufferPM25Value = readDustSensorEMA();
     if (bufferPM25Value > 0) pm25Value = bufferPM25Value;
-    co2Value = readMQ135("CO2");
+    co2Value = readMQ135();
     coValue = readMQ7();
     dhtValue = readDHT11();
     pm25Quality = checkQualityPM25(pm25Value);
@@ -729,6 +748,10 @@ void loop() {
       // สร้าง JSON document ขนาดใหญ่พอสมควร
       StaticJsonDocument<512> dataDoc;
 
+      // StatusInternet
+      JsonObject statusInternetObj = dataDoc.createNestedObject("status");
+      statusInternetObj["status"] = statusInternet;
+
       // ใส่ค่าฝุ่น PM2.5
       JsonObject pm25Obj = dataDoc.createNestedObject("pm25");
       pm25Obj["unit"] = "ug/m³";
@@ -776,6 +799,7 @@ void loop() {
         reconnectMQTT();
       } else {
         statusWifi = "Internet Online";
+        statusInternet = "online";
         jsonSize = serializeJson(pm25Doc, jsonStr);
         if (!client.publish(mqtt_path_pm25.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish pm2.5 failed!"); }
         jsonSize = serializeJson(co2Doc, jsonStr);
