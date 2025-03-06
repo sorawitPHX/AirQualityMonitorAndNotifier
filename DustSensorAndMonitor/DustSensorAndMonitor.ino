@@ -50,6 +50,7 @@ const String mqtt_path_co2 = "airqualitynotifyer/" + device_id + "/co2";
 const String mqtt_path_co = "airqualitynotifyer/" + device_id + "/co";
 const String mqtt_path_temperature = "airqualitynotifyer/" + device_id + "/temperature";
 const String mqtt_path_humid = "airqualitynotifyer/" + device_id + "/humid";
+const String mqtt_path_statusESP = "airqualitynotifyer/" + device_id + "/status";
 String clientID = "ESP32_Client_" + String(random(1000, 9999));
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -190,8 +191,9 @@ void reconnectMQTT() {
   if (now - lastAttempt > 5000) {
     lastAttempt = now;
     Serial.println("กำลังเชื่อมต่อ MQTT...");
-    if (client.connect(clientID.c_str())) {
+    if (client.connect(clientID.c_str(), NULL, NULL, mqtt_path_statusESP.c_str(), 0, true, "{\"status\":\"offline\"}")) {
       Serial.println("MQTT เชื่อมต่อสำเร็จ!");
+      sendStatus("online");
       client.subscribe("test/topic");
     } else {
       Serial.print("MQTT เชื่อมต่อไม่สำเร็จ! Error code: ");
@@ -380,6 +382,19 @@ String checkLevelHumid(float value) {
   } else {
     return "Too Humid";
   }
+}
+
+void sendStatus(String status) {
+  StaticJsonDocument<256> statusESPDoc;
+
+  // Status Of ESP32
+  statusESPDoc["status"] = status;
+
+  char jsonStr[256];
+  size_t jsonSize;
+
+  jsonSize = serializeJson(statusESPDoc, jsonStr);
+  if (!client.publish(mqtt_path_statusESP.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish status failed!"); }
 }
 
 void printOLED(
@@ -604,6 +619,12 @@ void setup() {
   //setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
+
+  // ตั้งค่า LWT ให้ Broker ส่ง "offline" ถ้า ESP32 หลุด
+  client.connect(clientID.c_str(), NULL, NULL, mqtt_path_statusESP.c_str(), 0, true, "{\"status\":\"offline\"}");
+
+  // ส่ง "online" เมื่อเชื่อมต่อ MQTT สำเร็จ
+  sendStatus("online");
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) {  // Address 0x3D for 128x64
