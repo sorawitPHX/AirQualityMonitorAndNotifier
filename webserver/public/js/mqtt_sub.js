@@ -4,6 +4,9 @@ let ws_protocal = window.location.protocol == 'https:' ? 'wss:' : 'ws:'
 const ws = new WebSocket(`${ws_protocal}//${url}`);
 const urlParams = new URLSearchParams(window.location.search);
 let mode = urlParams.get('mode') || 'mqtt';
+let deviceStatus = 'offline'
+let toggleSendMQTT = localStorage.getItem('toggleSendMQTT')=='true' ? true : false
+const toggleSendMQTTinput = document.getElementById('toggleSendMQTT')
 const gasQualityColors = {
     "Good": "green-600",
     "Normal": "lime-500",
@@ -169,7 +172,8 @@ function changeBgColor(element, newBgClass) {
     element.classList.add(newBgClass);
 }
 
-const cardContainer = document.getElementById('card-container')
+// Websocket หลักในการรับค่า mqtt
+
 document.addEventListener('DOMContentLoaded', () => {
     const searchBluetoothContainer = document.getElementById('searchBluetoothContainer')
     if (mode == 'mqtt') {
@@ -178,12 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         ws.onmessage = async (event) => {
             const data = JSON.parse(event.data);
-            let dataObj = {}
-            dataObj[data.header] = data.value
-            dataObj['timestamp'] = new Date()
-            // console.log(data)
-            // console.log(dataObj)
-            updateElement(dataObj)
+            console.log(data)
+            updateElement(data)
         };
         ws.onerror = (error) => {
             console.error("WebSocket Error:", error);
@@ -195,21 +195,87 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (mode == 'bluetooth') {
         searchBluetoothContainer.classList.toggle('hidden')
     }
-
 })
 
+
+document.addEventListener('DOMContentLoaded', () => {
+    const button = document.getElementById("notification-btn");
+    // ฟังก์ชันตรวจสอบสถานะ Notification Permission
+    function updateButton() {
+        if (Notification.permission === "granted") {
+            button.textContent = "ปิดการแจ้งเตือน";
+            button.classList.remove("bg-gray-500");
+            button.classList.add("bg-red-600");
+        } else {
+            button.textContent = "เปิดการแจ้งเตือน";
+            button.classList.remove("bg-red-600");
+            button.classList.add("bg-gray-500");
+        }
+    }
+
+    // อัพเดตสถานะปุ่มเมื่อโหลดหน้า
+    updateButton();
+
+    // Event Listener สำหรับปุ่ม
+    button.addEventListener("click", () => {
+        if (Notification.permission === "granted") {
+            // ถ้าได้รับอนุญาตแล้ว ให้ปิดการแจ้งเตือน
+            alert("คุณสามารถปิดการแจ้งเตือนได้จากการตั้งค่าเบราว์เซอร์");
+        } else if (Notification.permission === "denied") {
+            // ถ้าถูกปฏิเสธ ให้แจ้งเตือนให้ไปเปลี่ยนสิทธิ์ใน settings
+            alert("คุณได้ปิดกั้นการแจ้งเตือน โปรดเปิดสิทธิ์จากการตั้งค่าเบราว์เซอร์");
+        } else {
+            // ถ้าเป็น "default" (ยังไม่อนุญาตหรือปฏิเสธ) ให้ขอสิทธิ์ใหม่
+            Notification.requestPermission().then(permission => {
+                updateButton();
+                if (permission === "granted") {
+                    new Notification("แจ้งเตือนเปิดใช้งานแล้ว!");
+                }
+            });
+        }
+    });
+})
+
+
+const cardContainer = document.getElementById('card-container')
 const lastestUpdateSpan = document.getElementById('lastestUpdate')
 let pm25Value
 let co2Value
 let coValue
 async function updateElement(data) {
+    if (data.status) {
+        deviceStatus = data.status.status
+    }
+    const deviceStatusContainer = document.getElementById('deviceStatusContainer')
+    if (deviceStatus == 'online') {
+        deviceStatusContainer.innerHTML = `<span class="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                                            <span class="w-2 h-2 me-1 bg-green-500 rounded-full"></span>
+                                            <span>Internet ของอุปกรณ์ ${deviceStatus}</span>
+                                        </span>`
+    } else {
+        deviceStatusContainer.innerHTML = `<span class="inline-flex items-center bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
+                                            <span class="w-2 h-2 me-1 bg-red-500 rounded-full"></span>
+                                            <span>Internet ของอุปกรณ์ ${deviceStatus}</span>
+                                        </span>`
+    }
     for (const [key, valueData] of Object.entries(data)) {
         const card = cardContainer.querySelector(`#${key}Card`)
         if (card) {
+            const loadingContainer = document.querySelector('.loadingScreen')
+            const dataContainer = document.querySelector('#main-container')
+            loadingContainer.classList.add('hidden')
+            dataContainer.classList.remove('hidden')
             if (data.pm25) pm25Value = data.pm25.value
             if (data.co2) co2Value = data.co2.value
             if (data.co) coValue = data.co.value
-            const timestamp = new Date(data.timestamp).toLocaleString('th-TH')
+            const timestamp = new Date(data.timestamp).toLocaleString('th-TH', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            })
             lastestUpdateSpan.innerText = timestamp
             const value = card.querySelector('[name="value"]')
             const unit = card.querySelector('[name="unit"]')
@@ -284,7 +350,6 @@ function calOverallAQI(pm25Value, co2Value, coValue) {
 }
 
 async function requestNotificationPermission() {
-    // ตรวจสอบว่าเบราว์เซอร์รองรับการแจ้งเตือนหรือไม่
     if ('Notification' in window) {
         if (Notification.permission === 'default') {
             const permission = await Notification.requestPermission();
@@ -317,11 +382,22 @@ document.getElementById('notifyButton').addEventListener('click', async () => {
     showNotification('แจ้งเตือน!', 'คุณภาพอากาศไม่ดี');
 });
 
-document.getElementById('selectMode').addEventListener('change', (e) => {
-    const newMode = e.target.value;
-    const newUrl = `${window.location.pathname}?mode=${newMode}`;
-    window.history.pushState({}, '', newUrl);
-    location.reload()
+// ปุ่มเปลี่ยนโหมด
+document.addEventListener('DOMContentLoaded', () => {
+    const changeModeButton = document.querySelectorAll('[name="changeMode"]')
+    if (changeModeButton) {
+        // เพิ่ม EventListener
+        changeModeButton.forEach(button => {
+            button.addEventListener('click', (e) => {
+                window.location = `?mode=${e.target.value}`
+            })
+
+            // กำหนด Style ให้ปุ่มเปลี่ยนโหมด
+            const activeClass = "bg-gray-900 text-white";
+            button.value === mode ? button.classList.add(...activeClass.split(' ')) : ''
+        })
+
+    }
 })
 
 let bleDevice;
@@ -347,8 +423,8 @@ async function connectBLE() {
             let dataObj = decoder.decode(event.target.value);
             dataObj = JSON.parse(dataObj)
             dataObj['timestamp'] = new Date()
-            // console.log("Received JSON: ", dataObj);
             updateElement(dataObj)
+            sendDataToWebSocket(dataObj)
         });
         await bleCharacteristic.startNotifications();
         alert(`เชื่อมต่อกับอุปกรณ์ ${bleDevice.name} สำเร็จ`)
@@ -366,6 +442,28 @@ async function connectBLE() {
         bluetoothStatusElement.classList.add('bg-red-100')
         bluetoothNameElement.innerText = `${bleDevice.name} ไม่สำเร็จ❌`
         console.error("BLE Connection Error: ", error);
+    }
+}
+
+
+toggleSendMQTTinput.addEventListener('change', (e)=>{
+    const value = e.target.checked
+    toggleSendMQTT = localStorage.setItem('toggleSendMQTT', value)
+})
+document.addEventListener('DOMContentLoaded', () => {
+    toggleSendMQTTinput.checked = toggleSendMQTT
+})
+
+
+function sendDataToWebSocket(data) {
+    toggleSendMQTT = toggleSendMQTTinput.checked
+    if(deviceStatus == 'offline' && toggleSendMQTT) {
+        try{
+            if(ws) ws.send(JSON.stringify(data))
+            console.log('send data to websocket to mqtt')
+        }catch(error) {
+            console.error(error)
+        }
     }
 }
 
@@ -392,8 +490,3 @@ async function sendDataToBLENoRes(data) {
         console.error("❌ ส่งข้อมูลไม่สำเร็จ:", error);
     }
 }
-
-
-document.addEventListener('DOMContentLoaded', () => {
-    selectMode.value = mode;
-})
