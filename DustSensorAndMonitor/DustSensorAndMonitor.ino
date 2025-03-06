@@ -29,6 +29,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // Wifi Manager
 WiFiManager wm;
 bool portalRunning = false;
+IPAddress ip;
 
 const int DELAY_LOOP_MS = 5;  // change to slow down how often to read
 
@@ -139,14 +140,34 @@ void setup_wifi() {
   Serial.printf("Connecting to the %s ...", ssid);
 }
 
+const unsigned long reconnectInterval = 10000;  // ให้เชื่อมต่อ WiFi ใหม่ 10 วินาที
+const unsigned long AP_Open_Timeout = 11000;    // หลังจากวินาทีที่ 11 วินาที ให้เปิด AP ขึ้นมา
+unsigned long wifiLostTime = 0;
+bool AP_Opened = false;
+
 void reconnectWiFi() {
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi หลุด! กำลังเชื่อมใหม่...");
-    WiFi.begin(ssid, password);
+    if (wifiLostTime == 0) wifiLostTime = millis();  // บันทึกเวลาที่ WiFi หาย
+    Serial.printf("wifilosttime %d, ap_opended %d\n", wifiLostTime, AP_Opened);
+
+    if (millis() - wifiLostTime <= 0) {
+      Serial.println("WiFi หลุด! กำลังเชื่อมใหม่...");
+      WiFi.disconnect();
+      WiFi.reconnect();
+    }
+
+    // if (millis() - wifiLostTime >= AP_Open_Timeout && !AP_Opened) {
+    //   Serial.println("❌ WiFi หายไปนาน! เปิด AP Config Portal...");
+    //   WiFi.disconnect(true);
+    //   WiFi.mode(WIFI_AP_STA);
+    //   wm.startConfigPortal((String("AirQualityMonitorNotifier_") + device_id).c_str(), "12345678");
+    //   AP_Opened = true;
+    // }
   } else {
-    Serial.println("WiFi connected!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
+    wifiLostTime = 0;   // รีเซ็ตตัวจับเวลา
+    AP_Opened = false;  // ถ้า WiFi กลับมา AP ต้องปิดไปเอง
+    Serial.println(WiFi.SSID());
+    Serial.printf("After connected wifi wifilosttime %d, ap_opended %d\n", wifiLostTime, AP_Opened);
   }
 }
 
@@ -569,8 +590,8 @@ void displayData(String title, float value, String quality) {
 }
 
 void setup() {
-  Serial.begin(9600);
-  WiFi.mode(WIFI_STA); // ตั้งค่าให้ ESP ใช้โหมด Station (STA)
+  Serial.begin(115200);
+  WiFi.mode(WIFI_AP_STA);  // ตั้งค่าให้ ESP ใช้โหมด Station (STA)
 
   pinMode(dustLedPower, OUTPUT);
   pinMode(dustMeasurePin, INPUT);
@@ -618,9 +639,8 @@ void setup() {
   Serial.println("BLE Server Started");
 
   // set esp as Access Point (AP)
-  wm.setConfigPortalBlocking(false); // ทำให้ Config Portal ไม่บล็อกการทำงานของ loop()
-
-  if (wm.autoConnect((String("AirQualityMonitorNotifier_") + device_id).c_str())) {
+  wm.setConfigPortalBlocking(false);  // ทำให้ Config Portal ไม่บล็อกการทำงานของ loop()
+  if (wm.autoConnect((String("AirQualityMonitorNotifier_") + device_id).c_str()), "12345678") {
     Serial.println("");
     Serial.println("Connected already WiFi :) ");
     Serial.println("IP Address : ");
@@ -634,9 +654,10 @@ void setup() {
 void loop() {
   static unsigned long previousMainLoop = 0;
 
-  if(portalRunning) {
-    wm.process();
-  }
+  wm.process();
+  yield();
+  // if (portalRunning) {
+  // }
 
   // ถ้าพบคำสั่งให้รีเซ็ต WiFi
   //Serial.println(resetWiFi);
@@ -746,13 +767,15 @@ void loop() {
       Serial.println("Sent JSON via BLE");
     }
 
+    reconnectWiFi();
     if (WiFi.status() != WL_CONNECTED) {
-      //reconnectWiFi();
-      statusWifi = "Connecting";
+      statusWifi = "WiFi is connecting";
     } else {
       if (!client.connected()) {
+        statusWifi = "No Internet";
         reconnectMQTT();
       } else {
+        statusWifi = "Internet Online";
         jsonSize = serializeJson(pm25Doc, jsonStr);
         if (!client.publish(mqtt_path_pm25.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish pm2.5 failed!"); }
         jsonSize = serializeJson(co2Doc, jsonStr);
@@ -763,19 +786,18 @@ void loop() {
         if (!client.publish(mqtt_path_temperature.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish temperature failed!"); }
         jsonSize = serializeJson(humidDoc, jsonStr);
         if (!client.publish(mqtt_path_humid.c_str(), jsonStr, jsonSize)) { Serial.println("❌ Publish humid failed!"); }
-        statusWifi = "Internet Online";
       }
     }
     // ✅ ตรวจสอบและเชื่อมต่อ MQTT ใหม่ถ้าหลุด (ไม่บล็อก)
+    client.loop();
+    // Clear the display on each frame. We draw from the _circularBuffer
+    display.clearDisplay();
+    // erase status bar by drawing all black
+    display.fillRect(0, 0, display.width(), 8, SSD1306_BLACK);
+    // print all value to OLED including show status
+    printOLED(pm25Value, pm25Quality, coValue, coQuality, co2Value, co2Quality, dhtValue[0], humidLevel, dhtValue[1], tempLevel, statusWifi);
   }
 
-  client.loop();
-  // Clear the display on each frame. We draw from the _circularBuffer
-  display.clearDisplay();
-  // erase status bar by drawing all black
-  display.fillRect(0, 0, display.width(), 8, SSD1306_BLACK);
-  // print all value to OLED including show status
-  printOLED(pm25Value, pm25Quality, coValue, coQuality, co2Value, co2Quality, dhtValue[0], humidLevel, dhtValue[1], tempLevel, statusWifi);
 
-  // delay(DELAY_LOOP_MS);
+  delay(DELAY_LOOP_MS);
 }
