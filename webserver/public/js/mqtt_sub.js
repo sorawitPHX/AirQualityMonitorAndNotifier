@@ -81,7 +81,7 @@ let currentAudio = null; // เก็บออบเจ็กต์ Audio ปั
 function toggleMute(button) {
     isMuted = !isMuted;
     button.textContent = isMuted ? '🔇 เปิดเสียง' : '🔊 ปิดเสียง';
-    
+
 
     // หยุดเสียงทันทีหากกดปิดเสียง
     if (isMuted && currentAudio) {
@@ -204,34 +204,33 @@ let co2Value
 let coValue
 async function updateElement(data) {
     for (const [key, valueData] of Object.entries(data)) {
-        if (key != 'timestamp') {
-            const card = cardContainer.querySelector(`#${key}Card`)
-            if (card) {
-                if (data.pm25) pm25Value = data.pm25.value
-                if (data.co2) co2Value = data.co2.value
-                if (data.co) coValue = data.co.value
-                const timestamp = new Date(data.timestamp).toLocaleString('th-TH')
-                lastestUpdateSpan.innerText = timestamp
-                const value = card.querySelector('[name="value"]')
-                const unit = card.querySelector('[name="unit"]')
-                const quality = card.querySelector('[name="quality"]')
-                const updatedTime = card.querySelector('[name="updatedTime"]')
-                value.innerHTML = (valueData.value)
-                unit.innerHTML = (valueData.unit)
-                quality.innerHTML = (valueData.quality)
-                updatedTime.innerHTML = (timestamp)
-                await gasAlarm(key, valueData.quality)
-                const aqi = calOverallAQI(pm25Value, co2Value, coValue)
-                updateQualityOverall(aqi)
-                if (key == 'humid') {
-                    adjustClassColor(quality, valueData.quality, humidQualityColors, 'text')
-                    adjustClassColor(card, valueData.quality, humidQualityColors, 'border')
-                } else {
-                    adjustClassColor(quality, valueData.quality, gasQualityColors, 'text')
-                    adjustClassColor(card, valueData.quality, gasQualityColors, 'border')
-                }
+        const card = cardContainer.querySelector(`#${key}Card`)
+        if (card) {
+            if (data.pm25) pm25Value = data.pm25.value
+            if (data.co2) co2Value = data.co2.value
+            if (data.co) coValue = data.co.value
+            const timestamp = new Date(data.timestamp).toLocaleString('th-TH')
+            lastestUpdateSpan.innerText = timestamp
+            const value = card.querySelector('[name="value"]')
+            const unit = card.querySelector('[name="unit"]')
+            const quality = card.querySelector('[name="quality"]')
+            const updatedTime = card.querySelector('[name="updatedTime"]')
+            value.innerHTML = (valueData.value)
+            unit.innerHTML = (valueData.unit)
+            quality.innerHTML = (valueData.quality)
+            updatedTime.innerHTML = (timestamp)
+            await gasAlarm(key, valueData.quality)
+            const aqi = calOverallAQI(pm25Value, co2Value, coValue)
+            updateQualityOverall(aqi)
+            if (key == 'humid') {
+                adjustClassColor(quality, valueData.quality, humidQualityColors, 'text')
+                adjustClassColor(card, valueData.quality, humidQualityColors, 'border')
+            } else {
+                adjustClassColor(quality, valueData.quality, gasQualityColors, 'text')
+                adjustClassColor(card, valueData.quality, gasQualityColors, 'border')
             }
         }
+
     }
 }
 

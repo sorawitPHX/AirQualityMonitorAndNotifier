@@ -16,18 +16,18 @@ const wss = new WebSocket.Server({ server })
 
 
 const mqttClient = mqtt.connect(mqtt_broker, {
-    clientId: 'AirQualityMonitorAndNotifier'
+    clientId: `AirQualityMonitorAndNotifier_${Math.floor(Math.random()*10E6)}`,
+    clean: true,  // ไม่ให้ broker จำ session เก่า
+    keepalive: 60,
 })
-
-mqttClient.on('connect', () => {
+mqttClient.on('connect', (e) => {
     try {
-        console.log(`Connected to mqtt ${mqtt_broker} ${new Date().toISOString()}`)
         mqttClient.subscribe("airqualitynotifyer/1/#");
+        // console.log('Mqtt Connnected')
     } catch (error) {
         console.error(error)
     }
 })
-
 mqttClient.on('message', (topic, message) => {
     try {
         const header = topic.split('/').slice(-1)[0]
@@ -36,17 +36,32 @@ mqttClient.on('message', (topic, message) => {
             value: JSON.parse(message.toString()),
             timestamp: new Date()
         }
-        // console.log(new Date().toISOString(), data)
+        console.log(new Date().toISOString(), data)
         wss.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify(data));
-                // console.log('WS has been send!!')
             }
         });
     } catch (error) {
         console.error(error)
     }
 })
+mqttClient.on('close', () => {
+    console.log('❌ MQTT Disconnected');
+    mqttClient.unsubscribe("airqualitynotifyer/1/#", () => {
+        console.log("Unsubscribed before reconnect");
+    });
+});
+mqttClient.on('offline', () => {
+    console.log("⚠️ MQTT Client is Offline");
+});
+
+mqttClient.on('reconnect', () => {
+    console.log("🔄 MQTT Trying to Reconnect...");
+});
+mqttClient.on('error', (err) => {
+    console.error("MQTT Error:", err.message);
+});
 
 wss.on('connection', ws => {
     console.log(`${ws.readyState} Client Connected to WebSocket`);
