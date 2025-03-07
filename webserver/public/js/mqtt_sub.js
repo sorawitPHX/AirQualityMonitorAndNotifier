@@ -427,7 +427,7 @@ async function connectBLE() {
             sendDataToWebSocket(dataObj)
         });
         // ตั้งค่าตรวจจับเมื่อหลุดการเชื่อมต่อ
-        bluetoothDevice.addEventListener("gattserverdisconnected", (event)=>{
+        bleDevice.addEventListener("gattserverdisconnected", (event)=>{
             alert('Bluetooth หลุดการเชื่อมต่อ')
         });
         await bleCharacteristic.startNotifications();
