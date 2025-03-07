@@ -16,7 +16,7 @@ const wss = new WebSocket.Server({ server })
 
 const mqttPath = 'airqualitynotifyer/1/'
 const mqttClient = mqtt.connect(mqtt_broker, {
-    clientId: `AirQualityMonitorAndNotifier_${Math.floor(Math.random()*10E6)}`,
+    clientId: `AirQualityMonitorAndNotifier_${Math.floor(Math.random() * 10E6)}`,
     clean: true,  // ไม่ให้ broker จำ session เก่า
     keepalive: 60,
 })
@@ -32,8 +32,8 @@ let data = {}
 mqttClient.on('message', (topic, message) => {
     try {
         const header = topic.split('/').slice(-1)[0]
-        const data_message = JSON.parse(message)        
-        data[header] = data_message    
+        const data_message = JSON.parse(message)
+        data[header] = data_message
         data['timestamp'] = new Date()
         console.log(data)
         wss.clients.forEach(client => {
@@ -63,14 +63,11 @@ mqttClient.on('error', (err) => {
 });
 
 wss.on('connection', ws => {
-    // console.log(`${ws} Client Connected to WebSocket`);
     ws.send(JSON.stringify({ message: "Connected to WebSocket Server" }));
-    ws.send(JSON.stringify(data) );
-    // console.log(data)
-    ws.on('message', message=>{
+    ws.send(JSON.stringify(data));
+    ws.on('message', message => {
         const data = JSON.parse(message)
-        // console.log(`this log from web client ${JSON.parse(message)}`)
-        for(const [key, value] of Object.entries(data)) {
+        for (const [key, value] of Object.entries(data)) {
             mqttClient.publish(`${mqttPath}${key}`, JSON.stringify(value))
         }
         console.log('Data sent to MQTT')
@@ -89,23 +86,23 @@ app.get('/', (req, res) => {
 })
 
 app.post('/convert-text-to-speech', async (req, res) => {
-  const { text } = req.body;
-  if (!text) {
-    return res.status(400).send("กรุณากรอกข้อความ");
-  }
-  const url = googleTTS.getAudioUrl(text, {
-    lang: 'th',  // ภาษาไทย
-    slow: false,  // ควบคุมความเร็วเสียง
-  });
+    const { text } = req.body;
+    if (!text) {
+        return res.status(400).send("กรุณากรอกข้อความ");
+    }
+    const url = googleTTS.getAudioUrl(text, {
+        lang: 'th',  // ภาษาไทย
+        slow: false,  // ควบคุมความเร็วเสียง
+    });
 
-  try {
-    const audioResponse = await axios({ url, responseType: 'arraybuffer' });
-    res.set('Content-Type', 'audio/mp3');
-    res.send(audioResponse.data);
-  } catch (err) {
-    console.error('เกิดข้อผิดพลาดในการแปลงข้อความ:', err);
-    res.status(500).send('เกิดข้อผิดพลาดในการแปลงข้อความ');
-  }
+    try {
+        const audioResponse = await axios({ url, responseType: 'arraybuffer' });
+        res.set('Content-Type', 'audio/mp3');
+        res.send(audioResponse.data);
+    } catch (err) {
+        console.error('เกิดข้อผิดพลาดในการแปลงข้อความ:', err);
+        res.status(500).send('เกิดข้อผิดพลาดในการแปลงข้อความ');
+    }
 });
 
 server.listen(PORT, () => {

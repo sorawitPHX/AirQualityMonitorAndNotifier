@@ -52,7 +52,7 @@
                 </button>
               </div>
               <div>
-                <button id="notifyButton" onclick="toggleMute(this)" class="ms-auto border rounded-lg p-2 bg-black text-white cursor-pointer transition duration-300 ease-in-out">
+                <button id="muteButton" onload="toggleMuteFunc(this)" onclick="toggleMuteFunc(this)" class="ms-auto border rounded-lg p-2 bg-black text-white cursor-pointer transition duration-300 ease-in-out">
                   🔊 ปิดเสียง
                 </button>
               </div>
@@ -134,12 +134,13 @@
             <span class="font-bold">เชื่อมต่อกับอุปกรณ์: </span>
             <span class="font-mono" id="bluetoothDeviceName"></span>
           </h3>
-
+    
           <label class="inline-flex items-center cursor-pointer">
             <input type="checkbox" id="toggleSendMQTT" class="sr-only peer">
             <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
             <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-500">ส่งค่าไปที่ MQTT</span>
           </label>
+          <span class="ms-3 px-2 bg-gray-400 rounded-full cursor-pointer">?</span>
         </div>
         <div class="flex gap-3 items-center justify-center min-h-[calc(100vh-180px)] loadingScreen">
           <div role="status">
@@ -149,7 +150,7 @@
             </svg>
             <span class="sr-only">Loading...</span>
           </div>
-          กำลังโหลดข้อมูล
+          รอข้อมูล
         </div>
         <div class="hidden" id="main-container">
           <p class="text-gray-600 mb-3">

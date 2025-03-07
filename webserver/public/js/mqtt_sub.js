@@ -7,6 +7,7 @@ let mode = urlParams.get('mode') || 'mqtt';
 let deviceStatus = 'offline'
 let toggleSendMQTT = localStorage.getItem('toggleSendMQTT')=='true' ? true : false
 const toggleSendMQTTinput = document.getElementById('toggleSendMQTT')
+let toggleMute = localStorage.getItem('toggleMute')=='true' ? true : false
 const gasQualityColors = {
     "Good": "green-600",
     "Normal": "lime-500",
@@ -81,19 +82,18 @@ let isMuted = false; // ตัวแปรเก็บสถานะเปิ�
 let currentAudio = null; // เก็บออบเจ็กต์ Audio ปัจจุบัน
 
 // ฟังก์ชันเปิด/ปิดเสียง
-function toggleMute(button) {
-    isMuted = !isMuted;
-    button.textContent = isMuted ? '🔇 เปิดเสียง' : '🔊 ปิดเสียง';
-
-
+function toggleMuteFunc(button) {
+    localStorage.setItem('toggleMute')
+    button.textContent = toggleMute ? '🔇 เปิดเสียง' : '🔊 ปิดเสียง';
     // หยุดเสียงทันทีหากกดปิดเสียง
-    if (isMuted && currentAudio) {
+    if (toggleMute && currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
         currentAudio = null;
         speechQueue.length = 0; // ล้างคิวเสียงทั้งหมด
         isPlaying = false;
     }
+    // isMuted = !isMuted;
 }
 
 async function convertTextToSpeech(text) {
@@ -377,10 +377,10 @@ function showNotification(title, message) {
     }
 }
 
-document.getElementById('notifyButton').addEventListener('click', async () => {
-    await requestNotificationPermission();
-    showNotification('แจ้งเตือน!', 'คุณภาพอากาศไม่ดี');
-});
+// document.getElementById('notifyButton').addEventListener('click', async () => {
+//     await requestNotificationPermission();
+//     showNotification('แจ้งเตือน!', 'คุณภาพอากาศไม่ดี');
+// });
 
 // ปุ่มเปลี่ยนโหมด
 document.addEventListener('DOMContentLoaded', () => {
@@ -425,6 +425,10 @@ async function connectBLE() {
             dataObj['timestamp'] = new Date()
             updateElement(dataObj)
             sendDataToWebSocket(dataObj)
+        });
+        // ตั้งค่าตรวจจับเมื่อหลุดการเชื่อมต่อ
+        bluetoothDevice.addEventListener("gattserverdisconnected", (event)=>{
+            alert('Bluetooth หลุดการเชื่อมต่อ')
         });
         await bleCharacteristic.startNotifications();
         alert(`เชื่อมต่อกับอุปกรณ์ ${bleDevice.name} สำเร็จ`)
