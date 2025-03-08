@@ -5,9 +5,9 @@ const ws = new WebSocket(`${ws_protocal}//${url}`);
 const urlParams = new URLSearchParams(window.location.search);
 let mode = urlParams.get('mode') || 'mqtt';
 let deviceStatus = 'offline'
-let toggleSendMQTT = localStorage.getItem('toggleSendMQTT')=='true' ? true : false
+let toggleSendMQTT = localStorage.getItem('toggleSendMQTT') == 'true' ? true : false
 const toggleSendMQTTinput = document.getElementById('toggleSendMQTT')
-let toggleMute = localStorage.getItem('toggleMute')=='true' ? true : false
+let toggleMute = localStorage.getItem('toggleMute') == 'true' ? true : false
 const gasQualityColors = {
     "Good": "green-600",
     "Normal": "lime-500",
@@ -48,6 +48,7 @@ async function gasAlarm(type, quality) {
         return;  // ถ้าเหมือนเดิมให้ข้ามไป ไม่ทำงาน
     }
     if (['Unhealthy', 'Very Unhealthy', 'Poor', 'Dangerous'].includes(quality)) {
+        console.log(quality)
         let typeTH = '';
         switch (type) {
             case 'pm25':
@@ -181,8 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("Connected to WebSocket Server");
         };
         ws.onmessage = async (event) => {
-            const data = JSON.parse(event.data);
-            console.log(data)
+            const data = await JSON.parse(event.data);
+            // console.log(data.temperature.value)
             updateElement(data)
         };
         ws.onerror = (error) => {
@@ -243,10 +244,19 @@ let pm25Value
 let co2Value
 let coValue
 async function updateElement(data) {
+    const deviceStatusContainer = document.getElementById('deviceStatusContainer')
+    const timestampLocal = new Date(data.timestamp).toLocaleString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    })
+    const timestamp = new Date(data.timestamp)
     if (data.status) {
         deviceStatus = data.status.status
     }
-    const deviceStatusContainer = document.getElementById('deviceStatusContainer')
     if (deviceStatus == 'online') {
         deviceStatusContainer.innerHTML = `<span class="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
                                             <span class="w-2 h-2 me-1 bg-green-500 rounded-full"></span>
@@ -258,6 +268,11 @@ async function updateElement(data) {
                                             <span>Internet ของอุปกรณ์ ${deviceStatus}</span>
                                         </span>`
     }
+    updateChart("temperature", data.temperature.value);
+    updateChart("humid", data.humid.value);
+    updateChart("pm25", data.pm25.value);
+    updateChart("co2", data.co2.value);
+    updateChart("co", data.co.value);
     for (const [key, valueData] of Object.entries(data)) {
         const card = cardContainer.querySelector(`#${key}Card`)
         if (card) {
@@ -268,15 +283,8 @@ async function updateElement(data) {
             if (data.pm25) pm25Value = data.pm25.value
             if (data.co2) co2Value = data.co2.value
             if (data.co) coValue = data.co.value
-            const timestamp = new Date(data.timestamp).toLocaleString('th-TH', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            })
-            lastestUpdateSpan.innerText = timestamp
+            
+            lastestUpdateSpan.innerText = timestampLocal
             const value = card.querySelector('[name="value"]')
             const unit = card.querySelector('[name="unit"]')
             const quality = card.querySelector('[name="quality"]')
@@ -284,7 +292,7 @@ async function updateElement(data) {
             value.innerHTML = (valueData.value)
             unit.innerHTML = (valueData.unit)
             quality.innerHTML = (valueData.quality)
-            updatedTime.innerHTML = (timestamp)
+            updatedTime.innerHTML = (timestampLocal)
             await gasAlarm(key, valueData.quality)
             const aqi = calOverallAQI(pm25Value, co2Value, coValue)
             updateQualityOverall(aqi)
@@ -295,6 +303,7 @@ async function updateElement(data) {
                 adjustClassColor(quality, valueData.quality, gasQualityColors, 'text')
                 adjustClassColor(card, valueData.quality, gasQualityColors, 'border')
             }
+            
         }
 
     }
@@ -427,7 +436,7 @@ async function connectBLE() {
             sendDataToWebSocket(dataObj)
         });
         // ตั้งค่าตรวจจับเมื่อหลุดการเชื่อมต่อ
-        bleDevice.addEventListener("gattserverdisconnected", (event)=>{
+        bleDevice.addEventListener("gattserverdisconnected", (event) => {
             alert('Bluetooth หลุดการเชื่อมต่อ')
         });
         await bleCharacteristic.startNotifications();
@@ -450,7 +459,7 @@ async function connectBLE() {
 }
 
 
-toggleSendMQTTinput.addEventListener('change', (e)=>{
+toggleSendMQTTinput.addEventListener('change', (e) => {
     const value = e.target.checked
     toggleSendMQTT = localStorage.setItem('toggleSendMQTT', value)
 })
@@ -461,11 +470,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function sendDataToWebSocket(data) {
     toggleSendMQTT = toggleSendMQTTinput.checked
-    if(deviceStatus == 'offline' && toggleSendMQTT) {
-        try{
-            if(ws) ws.send(JSON.stringify(data))
+    if (deviceStatus == 'offline' && toggleSendMQTT) {
+        try {
+            if (ws) ws.send(JSON.stringify(data))
             console.log('send data to websocket to mqtt')
-        }catch(error) {
+        } catch (error) {
             console.error(error)
         }
     }

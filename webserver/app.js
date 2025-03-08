@@ -28,19 +28,41 @@ mqttClient.on('connect', (e) => {
         console.error(error)
     }
 })
+let dataHeader = []
+let dataHeaderBuffer = []
+let completeDataHeader = false
 let data = {}
+let readyToSend = false
+let previous = Date.now()
 mqttClient.on('message', (topic, message) => {
     try {
         const header = topic.split('/').slice(-1)[0]
         const data_message = JSON.parse(message)
         data[header] = data_message
         data['timestamp'] = new Date()
-        console.log(data)
-        wss.clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(data));
-            }
-        });
+        // console.log(data)
+        // console.log(data_message)
+        readyToSend = false
+        completeDataHeader = true
+        if (!dataHeader.includes(header)) {
+            dataHeader.push(header)
+            completeDataHeader = false
+        }
+        if(completeDataHeader) {
+            dataHeader = []
+            console.clear()
+            console.log('Took time: ', Date.now() - previous)
+            console.log(data)
+            previous = Date.now()
+            readyToSend = true
+        }
+        if (readyToSend) {
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify(data));
+                }
+            });
+        }
     } catch (error) {
         console.error(error)
     }
@@ -79,6 +101,7 @@ app.use(express.static(path.join(__dirname, 'public')))
 app.use('/mqtt', express.static(path.join(__dirname, 'node_modules', 'mqtt', 'dist')))
 app.use('/bootstrap-icons', express.static(path.join(__dirname, 'node_modules', 'bootstrap-icons', 'font')))
 app.use('/flowbite', express.static(path.join(__dirname, 'node_modules', 'flowbite', 'dist')))
+app.use('/apexcharts', express.static(path.join(__dirname, 'node_modules', 'apexcharts', 'dist')))
 app.use(express.json());
 
 app.get('/', (req, res) => {

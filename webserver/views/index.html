@@ -134,7 +134,7 @@
             <span class="font-bold">เชื่อมต่อกับอุปกรณ์: </span>
             <span class="font-mono" id="bluetoothDeviceName"></span>
           </h3>
-    
+
           <label class="inline-flex items-center cursor-pointer">
             <input type="checkbox" id="toggleSendMQTT" class="sr-only peer">
             <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
@@ -227,8 +227,19 @@
             </div>
           </div>
         </div>
-
-        <div id="realtimeGraph">
+        <hr class="border border-gray-300 mb-3">
+        <div class="flex flex-col gap-3">
+          <div class="flex gap-2">
+            <button id="stopBtn" onclick="isUpdating = false" class="p-2.5 font-medium text-white cursor-pointer bg-red-500 hover:bg-red-700  active:bg-red-700 rounded-lg">หยุดกราฟ</button>
+            <button id="startBtn" onclick="isUpdating = true" class="p-2.5 font-medium text-white cursor-pointer bg-green-500 hover:bg-green-700 active:bg-green-700 rounded-lg">เริ่มดำเนินการต่อ</button>
+          </div>
+          <div class="grid md:grid-cols-2 gap-3">
+            <div class="shadow-md p-3 border border-gray-300 rounded-2xl" id="pmChart"></div>
+            <div class="shadow-md p-3 border border-gray-300 rounded-2xl" id="co2Chart"></div>
+            <div class="shadow-md p-3 border border-gray-300 rounded-2xl" id="coChart"></div>
+            <div class="shadow-md p-3 border border-gray-300 rounded-2xl" id="tempChart" class=""></div>
+            <div class="col-span-2 shadow-md p-3 border border-gray-300 rounded-2xl" id="humidChart"></div>
+          </div>
         </div>
       </div>
     </main>
@@ -248,8 +259,10 @@
     });
   });
 </script>
+<script src="/apexcharts/apexcharts.js"></script>
 <script src="/flowbite/flowbite.min.js"></script>
 <script src="/mqtt/mqtt.min.js"></script>
 <script src="/js/mqtt_sub.js"></script>
+<script src="/js/index-charts.js"></script>
 
 </html>

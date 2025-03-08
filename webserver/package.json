@@ -19,6 +19,7 @@
   "description": "",
   "dependencies": {
     "@tailwindcss/cli": "^4.0.9",
+    "apexcharts": "^4.5.0",
     "autoprefixer": "^10.4.20",
     "axios": "^1.8.1",
     "bootstrap-icons": "^1.11.3",
