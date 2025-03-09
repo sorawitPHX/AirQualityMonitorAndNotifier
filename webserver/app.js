@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const fs = require('fs')
 const path = require('path')
@@ -6,6 +7,7 @@ const mqtt = require('mqtt')
 const WebSocket = require('ws')
 const googleTTS = require('google-tts-api')
 const axios = require('axios')
+const mongoose = require('mongoose')
 
 const PORT = process.env.PORT || 4001; // ใช้ process.env.PORT จาก cPanel
 const mqtt_broker = 'mqtt://broker.mqtt.cool'
@@ -14,34 +16,46 @@ const app = express()
 const server = http.createServer(app)
 const wss = new WebSocket.Server({ server })
 
-const mqttPath = 'airqualitynotifyer/1/'
+const MONGO_URI = process.env.MONGO_URI
+const { insertSensorData, parseFormatData } = require('./utils/SensorDataHandle')
+mongoose.connection.on('connected', () => console.log('connected'));
+mongoose.connection.on('open', () => console.log('open'));
+mongoose.connection.on('disconnected', () => console.log('disconnected'));
+mongoose.connection.on('reconnected', () => console.log('reconnected'));
+mongoose.connection.on('disconnecting', () => console.log('disconnecting'));
+mongoose.connection.on('close', () => console.log('close'));
+mongoose.connect(MONGO_URI).then(result=>{
+    console.log('Mongo has been connected✅')
+}).catch(err=>{
+    console.error(err)
+})
+
+const device_id = '1'
+const mqttPath = `airqualitynotifyer/${device_id}/`
 const mqttClient = mqtt.connect(mqtt_broker, {
     clientId: `AirQualityMonitorAndNotifier_${Math.floor(Math.random() * 10E6)}`,
-    clean: true,  // ไม่ให้ broker จำ session เก่า
+    clean: true, 
     keepalive: 60,
 })
 mqttClient.on('connect', (e) => {
     try {
         mqttClient.subscribe(`${mqttPath}#`);
-        // console.log('Mqtt Connnected')
     } catch (error) {
         console.error(error)
     }
 })
 let dataHeader = []
-let dataHeaderBuffer = []
 let completeDataHeader = false
 let data = {}
 let readyToSend = false
 let previous = Date.now()
-mqttClient.on('message', (topic, message) => {
+mqttClient.on('message', async (topic, message) => {
     try {
         const header = topic.split('/').slice(-1)[0]
         const data_message = JSON.parse(message)
         data[header] = data_message
         data['timestamp'] = new Date()
-        // console.log(data)
-        // console.log(data_message)
+        data['device_id'] = device_id
         readyToSend = false
         completeDataHeader = true
         if (!dataHeader.includes(header)) {
@@ -51,9 +65,6 @@ mqttClient.on('message', (topic, message) => {
         if(completeDataHeader) {
             dataHeader = []
             console.clear()
-            console.log('Took time: ', Date.now() - previous)
-            console.log(data)
-            previous = Date.now()
             readyToSend = true
         }
         if (readyToSend) {
@@ -62,6 +73,12 @@ mqttClient.on('message', (topic, message) => {
                     client.send(JSON.stringify(data));
                 }
             });
+            // console.log(data)
+            const SensorData = parseFormatData(data)
+            await insertSensorData(SensorData)
+
+            console.log('Took Time', Date.now() - previous, 'ms')
+            previous = Date.now()
         }
     } catch (error) {
         console.error(error)
@@ -85,7 +102,7 @@ mqttClient.on('error', (err) => {
 });
 
 wss.on('connection', ws => {
-    ws.send(JSON.stringify({ message: "Connected to WebSocket Server" }));
+    // ws.send(JSON.stringify({ message: "Connected to WebSocket Server" }));
     ws.send(JSON.stringify(data));
     ws.on('message', message => {
         const data = JSON.parse(message)

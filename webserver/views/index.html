@@ -5,8 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Air Quality Dashboard</title>
-  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <script src="/js/tailwindV4.js"></script>
   <!-- <link rel="stylesheet" href="/css/tailwind.css"> -->
+  <!-- <script src="https://cdn.tailwindcss.com"></script> -->
   <link data-n-head="ssr" rel="icon" type="image/x-icon" href="/images/favicon.ico">
   <link rel="stylesheet" href="/bootstrap-icons/bootstrap-icons.min.css">
 </head>
@@ -52,8 +53,7 @@
                 </button>
               </div>
               <div>
-                <button id="muteButton" onload="toggleMuteFunc(this)" onclick="toggleMuteFunc(this)" class="ms-auto border rounded-lg p-2 bg-black text-white cursor-pointer transition duration-300 ease-in-out">
-                  🔊 ปิดเสียง
+                <button id="muteButton" class="ms-auto border rounded-lg p-2 bg-black text-white cursor-pointer transition duration-300 ease-in-out">
                 </button>
               </div>
               <div>
@@ -113,18 +113,21 @@
     <main class="p-4 lg:ml-64 mt-17">
       <div class="bg-white p-4 shadow-md rounded-2xl">
         <div class="grid gap-3 md:grid-cols-2 mb-3">
-          <div class="inline-flex rounded-md" role="group">
-            <button type="button" name="changeMode" value="mqtt" class="cursor-pointer px-4 py-2 transform-fill  text-sm font-medium text-gray-900 border border-gray-900 rounded-s-lg hover:bg-gray-900 hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 focus:bg-gray-900 focus:text-white">
-              MQTT
-            </button>
-            <button type="button" name="changeMode" value="bluetooth" class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-900 border border-gray-900 rounded-e-lg hover:bg-gray-900 hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 focus:bg-gray-900 focus:text-white">
-              Bluetooth
-            </button>
-            <div id="deviceStatusContainer" class="inline-flex items-center ms-3"></div>
+          <div class="inline-flex flex-wrap gap-3">
+            <div class="inline-flex rounded-md" role="group">
+              <button type="button" name="changeMode" value="mqtt" class="cursor-pointer px-4 py-2 transform-fill  text-sm font-medium text-gray-900 border border-gray-900 rounded-s-lg hover:bg-gray-900 hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 focus:bg-gray-900 focus:text-white">
+                MQTT
+              </button>
+              <button type="button" name="changeMode" value="bluetooth" class="cursor-pointer px-4 py-2 text-sm font-medium text-gray-900 border border-gray-900 rounded-e-lg hover:bg-gray-900 hover:text-white focus:z-10 focus:ring-2 focus:ring-gray-500 focus:bg-gray-900 focus:text-white">
+                Bluetooth
+              </button>
+            </div>
+            <div id="deviceStatusContainer" class="inline-flex items-center"></div>
+            <div id="bluetoothStatusContainer" class="inline-flex items-center"></div>
           </div>
         </div>
         <hr class="border border-gray-300 mb-3">
-        <div class="mb-4 hidden flex items-center" id="searchBluetoothContainer">
+        <div class="mb-4 hidden flex items-center flex-wrap gap-3" id="searchBluetoothContainer">
           <button type="button" onclick="connectBLE()" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2">
             <i class="bi bi-bluetooth"></i>
             ค้นหาอุปกรณ์ Bluetooth
@@ -135,13 +138,17 @@
             <span class="font-mono" id="bluetoothDeviceName"></span>
           </h3>
 
-          <label class="inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="toggleSendMQTT" class="sr-only peer">
-            <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
-            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-500">ส่งค่าไปที่ MQTT</span>
-          </label>
-          <span class="ms-3 px-2 bg-gray-400 rounded-full cursor-pointer">?</span>
+          <div class="flex items-center gap-2">
+            <label class="inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="toggleSendMQTT" class="sr-only peer">
+              <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+              <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-500">ส่งค่าไปที่ MQTT</span>
+            </label>
+            <div id="sendMqttStatusContainer">
+            </div>
+          </div>
         </div>
+        
         <div class="flex gap-3 items-center justify-center min-h-[calc(100vh-180px)] loadingScreen">
           <div role="status">
             <svg aria-hidden="true" class="w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -233,12 +240,12 @@
             <button id="stopBtn" onclick="isUpdating = false" class="p-2.5 font-medium text-white cursor-pointer bg-red-500 hover:bg-red-700  active:bg-red-700 rounded-lg">หยุดกราฟ</button>
             <button id="startBtn" onclick="isUpdating = true" class="p-2.5 font-medium text-white cursor-pointer bg-green-500 hover:bg-green-700 active:bg-green-700 rounded-lg">เริ่มดำเนินการต่อ</button>
           </div>
-          <div class="grid md:grid-cols-2 gap-3">
+          <div class="grid lg:grid-cols-2 gap-3">
             <div class="shadow-md p-3 border border-gray-300 rounded-2xl" id="pmChart"></div>
             <div class="shadow-md p-3 border border-gray-300 rounded-2xl" id="co2Chart"></div>
             <div class="shadow-md p-3 border border-gray-300 rounded-2xl" id="coChart"></div>
             <div class="shadow-md p-3 border border-gray-300 rounded-2xl" id="tempChart" class=""></div>
-            <div class="col-span-2 shadow-md p-3 border border-gray-300 rounded-2xl" id="humidChart"></div>
+            <div class="shadow-md p-3 border border-gray-300 rounded-2xl" id="humidChart"></div>
           </div>
         </div>
       </div>

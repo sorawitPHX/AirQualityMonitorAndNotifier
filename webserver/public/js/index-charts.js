@@ -22,21 +22,20 @@ const latestData = {
 function loadMoreData(chartContext, xaxis) {
     const chartName = chartContext.w.config.series[0].name; // ดึงชื่อซีรีส์ของกราฟ
     const type = getChartType(chartName); // หา key ที่ถูกต้องจาก charts
-
-    if (!type || !fullData[type] || !charts[type]) return; // ป้องกัน error
-
-    const oldData = fullData[type].filter(d => d.x < xaxis.min); // โหลดข้อมูลเก่าก่อนช่วง zoom
-    if (oldData.length === 0) return; // ถ้าไม่มีข้อมูลเก่า ไม่ต้องอัปเดต
-
-    const combinedData = [...oldData, ...latestData[type]]; // รวมข้อมูล
-
+    if (!type || !fullData[type] || !charts[type]) {
+        console.log(`type fullData chart ไม่มี`)
+        return;
+    } // ป้องกัน error
+    const combinedData = [...fullData[type]]; // รวมข้อมูล
     // 🔵 ใช้ charts[type] เพื่ออัปเดตกราฟ
     charts[type].updateSeries([{ data: combinedData }]);
 }
 
 // ✅ ฟังก์ชันช่วยหา key ของ charts จากชื่อซีรีส์
 function getChartType(chartName) {
-    return Object.keys(charts).find(key => charts[key].w.config.series[0].name === chartName);
+    let type = Object.keys(charts).find(key => charts[key].w.config.series[0].name === chartName);
+    console.log(type)
+    return type
 }
 
 function createChart(element, label, color) {
@@ -53,11 +52,23 @@ function createChart(element, label, color) {
             events: {
                 beforeZoom: (chartContext, { xaxis }) => {
                     loadMoreData(chartContext, xaxis);
+                    // console.log(chartContext)
                 }
             }
         },
         series: [{ name: label, data: [] }],
-        xaxis: { type: "datetime" },
+        xaxis: {
+            type: "datetime",
+            labels: {
+                datetimeUTC: false,
+                datetimeFormatter: {
+                    year: "yyyy",
+                    month: "MMM 'yy",
+                    day: "dd MMM",
+                    hour: "HH:mm"  // 🔥 แสดงเป็นเวลา Bangkok
+                }
+            }
+        },
         colors: [color],
         dataLabels: {
             enabled: false
@@ -71,9 +82,6 @@ function createChart(element, label, color) {
         },
         markers: {
             size: 0
-        },
-        xaxis: {
-            type: 'datetime',
         },
         yaxis: {
             min: 0
@@ -100,23 +108,12 @@ function createChart(element, label, color) {
     });
 }
 
-// สร้าง 5 กราฟ
-const charts = {
-    temperature: createChart("#tempChart", "Temperature (°C)", "#ff0000"),
-    humid: createChart("#humidChart", "Humidity (%)", "#0000ff"),
-    pm25: createChart("#pmChart", "PM2.5 (ug/m³)", "#00ff00"),
-    co2: createChart("#co2Chart", "CO2 (ppm)", "#800080"),
-    co: createChart("#coChart", "CO (ppm)", "#ffa500")
-};
-
-// เรนเดอร์กราฟทั้งหมด
-Object.values(charts).forEach(chart => chart.render());
 
 // เก็บค่าข้อมูลทั้งหมด ตั้งแต่เปิดเว็บ
 // ✅ ฟังก์ชันอัปเดตข้อมูล
 let isUpdating = true;  // กำหนดตัวแปรสำหรับการอัปเดตกราฟ
-function updateChart(type, value) {
-    const time = new Date().getTime();
+function updateChart(type, value, time) {
+    // console.log(time)
     // 🔵 เก็บข้อมูลทั้งหมด
     fullData[type].push({ x: time, y: value });
     // 🔵 ตัดให้เหลือแค่ 50 จุดล่าสุด
@@ -126,36 +123,14 @@ function updateChart(type, value) {
     }
 }
 
-
-
-// สร้าง 5 กราฟ
-// const tempChart = createChart("#tempChart", "Temperature (°C)", "#ff0000");
-// const humidChart = createChart("#humidChart", "Humidity (%)", "#0000ff");
-// const pmChart = createChart("#pmChart", "PM2.5 (ug/m³)", "#00ff00");
-// const co2Chart = createChart("#co2Chart", "CO2 (ppm)", "#800080");
-// const coChart = createChart("#coChart", "CO (ppm)", "#ffa500");
-
-// เรนเดอร์กราฟทั้งหมด
-// tempChart.render();
-// humidChart.render();
-// pmChart.render();
-// co2Chart.render();
-// coChart.render();
-
-// ฟังก์ชันอัปเดตข้อมูล
-// function updateChart(chart, value, timestamp = new Date()) {
-//     // const timestamp = new Date().getTime(); // Timestamp ปัจจุบัน
-//     const newData = { x: timestamp, y: value };
-//     // จำกัดจำนวนจุดข้อมูล
-//     if (chart.w.config.series[0].data.length >= maxDataPoints) {
-//         chart.w.config.series[0].data.shift();
-//     }
-//     // เพิ่มข้อมูลใหม่
-//     chart.updateSeries([{ data: [...chart.w.config.series[0].data, newData] }]);
-
-//     // ดึงค่า min/max ของ xaxis (ป้องกันการ reset zoom)
-//     const prevXAxis = chart.w.globals.minX ? {
-//         min: chart.w.globals.minX,
-//         max: chart.w.globals.maxX
-//     } : {};
-// }
+let charts = {}
+document.addEventListener('DOMContentLoaded', async () => {
+    charts = {
+        temperature: createChart("#tempChart", "Temperature (°C)", "#ff0000"),
+        humid: createChart("#humidChart", "Humidity (%)", "#0000ff"),
+        pm25: createChart("#pmChart", "PM2.5 (ug/m³)", "#00ff00"),
+        co2: createChart("#co2Chart", "CO2 (ppm)", "#800080"),
+        co: createChart("#coChart", "CO (ppm)", "#ffa500")
+    };
+    Object.values(charts).forEach(chart => chart.render());
+})

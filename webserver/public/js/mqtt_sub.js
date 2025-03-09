@@ -83,10 +83,14 @@ let isMuted = false; // ตัวแปรเก็บสถานะเปิ�
 let currentAudio = null; // เก็บออบเจ็กต์ Audio ปัจจุบัน
 
 // ฟังก์ชันเปิด/ปิดเสียง
-function toggleMuteFunc(button) {
-    localStorage.setItem('toggleMute')
-    button.textContent = toggleMute ? '🔇 เปิดเสียง' : '🔊 ปิดเสียง';
-    // หยุดเสียงทันทีหากกดปิดเสียง
+document.addEventListener('DOMContentLoaded', () => {
+    const muteButton = document.getElementById('muteButton')
+    toggleMuteDisplay(muteButton)
+    muteButton.addEventListener('click', toggleMuteClick)
+})
+function toggleMuteDisplay(button) {
+    // console.log(button)
+    button.textContent = toggleMute ? '🔇 เสียงถูกปิดอยู่' : '🔊 เสียงถูกเปิด';
     if (toggleMute && currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
@@ -94,7 +98,14 @@ function toggleMuteFunc(button) {
         speechQueue.length = 0; // ล้างคิวเสียงทั้งหมด
         isPlaying = false;
     }
-    // isMuted = !isMuted;
+    isMuted = !isMuted;
+}
+
+function toggleMuteClick(e) {
+    const button = e.target
+    toggleMute = !toggleMute
+    localStorage.setItem('toggleMute', toggleMute)
+    toggleMuteDisplay(button)
 }
 
 async function convertTextToSpeech(text) {
@@ -183,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         ws.onmessage = async (event) => {
             const data = await JSON.parse(event.data);
-            // console.log(data.temperature.value)
             updateElement(data)
         };
         ws.onerror = (error) => {
@@ -245,6 +255,7 @@ let co2Value
 let coValue
 async function updateElement(data) {
     const deviceStatusContainer = document.getElementById('deviceStatusContainer')
+    const bluetoothStatusContainer = document.getElementById('bluetoothStatusContainer')
     const timestampLocal = new Date(data.timestamp).toLocaleString('th-TH', {
         year: 'numeric',
         month: 'long',
@@ -253,7 +264,8 @@ async function updateElement(data) {
         minute: '2-digit',
         second: '2-digit'
     })
-    const timestamp = new Date(data.timestamp)
+    const time = new Date(data.timestamp).toLocaleString('th-TH', { timeZone: "Asia/Bangkok" })
+
     if (data.status) {
         deviceStatus = data.status.status
     }
@@ -268,11 +280,12 @@ async function updateElement(data) {
                                             <span>Internet ของอุปกรณ์ ${deviceStatus}</span>
                                         </span>`
     }
-    updateChart("temperature", data.temperature.value);
-    updateChart("humid", data.humid.value);
-    updateChart("pm25", data.pm25.value);
-    updateChart("co2", data.co2.value);
-    updateChart("co", data.co.value);
+    if(!data) console.log(data)
+    updateChart("temperature", data.temperature.value, time);
+    updateChart("humid", data.humid.value, time);
+    updateChart("pm25", data.pm25.value, time);
+    updateChart("co2", data.co2.value, time);
+    updateChart("co", data.co.value, time);
     for (const [key, valueData] of Object.entries(data)) {
         const card = cardContainer.querySelector(`#${key}Card`)
         if (card) {
@@ -283,7 +296,7 @@ async function updateElement(data) {
             if (data.pm25) pm25Value = data.pm25.value
             if (data.co2) co2Value = data.co2.value
             if (data.co) coValue = data.co.value
-            
+
             lastestUpdateSpan.innerText = timestampLocal
             const value = card.querySelector('[name="value"]')
             const unit = card.querySelector('[name="unit"]')
@@ -303,7 +316,7 @@ async function updateElement(data) {
                 adjustClassColor(quality, valueData.quality, gasQualityColors, 'text')
                 adjustClassColor(card, valueData.quality, gasQualityColors, 'border')
             }
-            
+
         }
 
     }
@@ -413,11 +426,10 @@ let bleDevice;
 let bleServer;
 let bleService;
 let bleCharacteristic;
+let bluetoothStatus
 const SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef0"
 const CHARACTERISTIC_UUID = "abcdef01-1234-5678-1234-56789abcdef0"
 async function connectBLE() {
-    const bluetoothStatusElement = document.getElementById('bluetoothDeviceStatus')
-    const bluetoothNameElement = document.getElementById('bluetoothDeviceName')
     try {
         bleDevice = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
@@ -432,32 +444,44 @@ async function connectBLE() {
             let dataObj = decoder.decode(event.target.value);
             dataObj = JSON.parse(dataObj)
             dataObj['timestamp'] = new Date()
+            console.log(dataObj)
             updateElement(dataObj)
             sendDataToWebSocket(dataObj)
         });
         // ตั้งค่าตรวจจับเมื่อหลุดการเชื่อมต่อ
         bleDevice.addEventListener("gattserverdisconnected", (event) => {
-            alert('Bluetooth หลุดการเชื่อมต่อ')
+            bluetoothStatus = 'offline'
+            displayBluetoothStatus()
+            alert('อุปกรณ์ Bluetooth ขาดการเชื่อมต่อ')
         });
         await bleCharacteristic.startNotifications();
+        bluetoothStatus = 'online'
+        displayBluetoothStatus()
         alert(`เชื่อมต่อกับอุปกรณ์ ${bleDevice.name} สำเร็จ`)
-        bluetoothStatusElement.classList.remove('hidden')
-        bluetoothStatusElement.classList.add('inline')
-        bluetoothStatusElement.classList.remove('bg-red-100')
-        bluetoothStatusElement.classList.add('bg-green-100')
-        bluetoothNameElement.innerText = `${bleDevice.name} สำเร็จ✅`
         console.log(`name:${bleDevice.name} id:${bleDevice.id} Connected and listening for BLE data...`);
     } catch (error) {
+        bluetoothStatus = 'offline'
+        displayBluetoothStatus()
         alert(`เชื่อมต่อกับอุปกรณ์ ${bleDevice.name} ไม่สำเร็จ ${error.toString()}`)
-        bluetoothStatusElement.classList.remove('hidden')
-        bluetoothStatusElement.classList.add('inline')
-        bluetoothStatusElement.classList.remove('bg-green-100')
-        bluetoothStatusElement.classList.add('bg-red-100')
-        bluetoothNameElement.innerText = `${bleDevice.name} ไม่สำเร็จ❌`
         console.error("BLE Connection Error: ", error);
     }
 }
 
+function displayBluetoothStatus() {
+    if (bluetoothStatus) {
+        if (bluetoothStatus == 'online') {
+            bluetoothStatusContainer.innerHTML = `<span class="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                                                    <span class="w-2 h-2 me-1 bg-green-500 rounded-full"></span>
+                                                    <span>Bluetooth ของอุปกรณ์ ${bluetoothStatus}</span>
+                                                </span>`
+        } else if (bluetoothStatus == 'offline') {
+            bluetoothStatusContainer.innerHTML = `<span class="inline-flex items-center bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
+                                                    <span class="w-2 h-2 me-1 bg-red-500 rounded-full"></span>
+                                                    <span>Bluetooth ของอุปกรณ์ ${bluetoothStatus}</span>
+                                                </span>`
+        }
+    }
+}
 
 toggleSendMQTTinput.addEventListener('change', (e) => {
     const value = e.target.checked
@@ -470,13 +494,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function sendDataToWebSocket(data) {
     toggleSendMQTT = toggleSendMQTTinput.checked
+    const sendMqttStatusContainer = document.getElementById('sendMqttStatusContainer')
     if (deviceStatus == 'offline' && toggleSendMQTT) {
         try {
-            if (ws) ws.send(JSON.stringify(data))
-            console.log('send data to websocket to mqtt')
+            if (ws) {
+                ws.send(JSON.stringify(data))
+                sendMqttStatusContainer.innerHTML = `<span class="p-0.5 inline-flex justify-center items-center bg-green-200 rounded-full cursor-pointer" onclick="alert('ค่ากำลังถูกส่งไปที่ MQTT Server')">✅</span>`
+            }
+            // console.log('send data to websocket to mqtt')
         } catch (error) {
+            sendMqttStatusContainer.innerHTML = `<span class="p-0.5 inline-flex justify-center items-center bg-yellow-200 rounded-full cursor-pointer" onclick="alert('ค่าไม่ถูกส่งไปที่ MQTT เนื่องจากอุปกรณ์ ${error.toString()}')">⚠️</span>`
             console.error(error)
         }
+    } else if (deviceStatus == 'online' && toggleSendMQTT) {
+        sendMqttStatusContainer.innerHTML = `<span class="p-0.5 inline-flex justify-center items-center bg-red-200 rounded-full cursor-pointer" onclick="alert('ค่าไม่ถูกส่งไปที่ MQTT เนื่องจากอุปกรณ์ Internet Online')">❌</span>`
+    }else {
+        sendMqttStatusContainer.innerHTML = `<span class="p-0.5 inline-flex justify-center items-center bg-slate-200 rounded-full cursor-pointer" onclick="alert('ค่าไม่ถูกส่งไปที่ MQTT เนื่องจากอุปกรณ์ปิดไว้อยู่')">😴</span>`
     }
 }
 

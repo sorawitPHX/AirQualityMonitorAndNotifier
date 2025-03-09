@@ -61,7 +61,7 @@ int dustMeasurePin = 34;
 int dustLedPower = 2;
 int MQ7Pin = 35;
 int MQ135Pin = 33;
-MQ135 mq135_sensor = MQ135(33);  
+MQ135 mq135_sensor = MQ135(33);
 int DHT11Pin = 19;
 int DHTType = DHT11;
 int sdaPin = 21;
@@ -80,9 +80,9 @@ float voMeasured = 0;
 float calcVoltage = 0;
 float dustDensity = 0;
 
-float dustEMA = 0; // เก็บค่าฝุ่นแบบ EMA
-const float alpha = 0.2; // ค่าการกรอง EMA (0.1 - 0.3 กำลังดี)
-const int numReadings = 10; // จำนวนรอบที่ใช้ค่าเฉลี่ยแบบ Moving Average
+float dustEMA = 0;           // เก็บค่าฝุ่นแบบ EMA
+const float alpha = 0.2;     // ค่าการกรอง EMA (0.1 - 0.3 กำลังดี)
+const int numReadings = 10;  // จำนวนรอบที่ใช้ค่าเฉลี่ยแบบ Moving Average
 
 unsigned long previousMillis = 0;
 
@@ -219,7 +219,7 @@ float readDustSensorEMA() {
   // อ่านค่าฝุ่นหลายครั้งแล้วใช้ค่าเฉลี่ยแบบ Moving Average
   for (int i = 0; i < numReadings; i++) {
     total += analogRead(dustMeasurePin);
-    delayMicroseconds(10); // เว้นช่วงการอ่านเล็กน้อย
+    delayMicroseconds(10);  // เว้นช่วงการอ่านเล็กน้อย
   }
 
   // ปิด LED ของเซ็นเซอร์หลังจากวัดค่าเสร็จ
@@ -278,7 +278,7 @@ float readMQ135() {
   // R0 = 24743.0;
   // a = 116.602;
   // b = -2.769;
-  
+
   // float R = 22000;
   // float V_Rseries = ((float)rawValue * esp32Voltage) / esp32AnalogLevel;
   // float Rs = ((esp32AnalogLevel * R) / rawValue) - R;
@@ -793,9 +793,11 @@ void loop() {
     reconnectWiFi();
     if (WiFi.status() != WL_CONNECTED) {
       statusWifi = "WiFi is connecting";
+      statusInternet = "offline";
     } else {
       if (!client.connected()) {
         statusWifi = "No Internet";
+        statusInternet = "offline";
         reconnectMQTT();
       } else {
         statusWifi = "Internet Online";
