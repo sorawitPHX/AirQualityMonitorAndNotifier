@@ -61,12 +61,6 @@ function createChart(element, label, color) {
             type: "datetime",
             labels: {
                 datetimeUTC: false,
-                datetimeFormatter: {
-                    year: "yyyy",
-                    month: "MMM 'yy",
-                    day: "dd MMM",
-                    hour: "HH:mm"  // 🔥 แสดงเป็นเวลา Bangkok
-                }
             }
         },
         colors: [color],
@@ -113,9 +107,11 @@ function createChart(element, label, color) {
 // ✅ ฟังก์ชันอัปเดตข้อมูล
 let isUpdating = true;  // กำหนดตัวแปรสำหรับการอัปเดตกราฟ
 function updateChart(type, value, time) {
-    // console.log(time)
+    console.log(time)
+    time = new Date(time).getTime()
+    const newTime = new Date()
     // 🔵 เก็บข้อมูลทั้งหมด
-    fullData[type].push({ x: time, y: value });
+    fullData[type].push({ x: newTime, y: value });
     // 🔵 ตัดให้เหลือแค่ 50 จุดล่าสุด
     latestData[type] = fullData[type].slice(-50);
     if (isUpdating) {

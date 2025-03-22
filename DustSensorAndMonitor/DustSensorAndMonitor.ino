@@ -114,23 +114,23 @@ class MyServerCallbacks : public BLEServerCallbacks {
   }
 };
 
-class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
-  void onWrite(BLECharacteristic* pCharacteristic) {
-    String value = pCharacteristic->getValue();
-    Serial.print("Received via RAW: ");
-    Serial.println(value);
-    if (value.length() > 0) {
-      Serial.print("Received via BLE: ");
-      Serial.println(value);
+// class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
+//   void onWrite(BLECharacteristic* pCharacteristic) {
+//     string value = pCharacteristic->getValue();
+//     Serial.print("Received via RAW: ");
+//     // Serial.println(value);
+//     if (value.length() > 0) {
+//       Serial.print("Received via BLE: ");
+//       Serial.println(value);
 
-      // ถ้าได้รับคำสั่ง "RESET_WIFI" ให้เคลียร์ค่า WiFi
-      if (value.equals("RESET_WIFI")) {
-        Serial.println("Resetting WiFi settings...");
-        resetWiFi = true;
-      }
-    }
-  }
-};
+//       // ถ้าได้รับคำสั่ง "RESET_WIFI" ให้เคลียร์ค่า WiFi
+//       if (value.equals("RESET_WIFI")) {
+//         Serial.println("Resetting WiFi settings...");
+//         resetWiFi = true;
+//       }
+//     }
+//   }
+// };
 
 void ledBlink(int ledPin, unsigned long int& previous, int intervalMilli = 500) {
   pinMode(ledPin, OUTPUT);
@@ -651,7 +651,7 @@ void setup() {
   BLECharacteristic* pCharacteristic = pService->createCharacteristic(
     CHARACTERISTIC_UUID,
     BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
-  pCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
+  // pCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
   sensorCharacteristic->addDescriptor(new BLE2902());
   pService->start();
   pServer->getAdvertising()->start();
